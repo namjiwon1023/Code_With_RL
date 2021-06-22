@@ -18,14 +18,14 @@ def get_args():
 
     parser.add_argument("--hidden-size", type=int, default=64, help="hidden layer units")
 
-    parser.add_argument("--update-rate", type=int, default=10, help="update rate")
+    parser.add_argument("--update-rate", type=int, default=1, help="update rate")
 
     parser.add_argument("--max_epsilon", type=float, default=1.0, help="max epsilon")
     parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
     parser.add_argument("--epsilon_decay", type=float, default=0.0005, help="epsilon decay")
 
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
-    # parser.add_argument("--tau", type=float, default=0.01, help="parameter for updating the target network")
+    parser.add_argument("--tau", type=float, default=0.01, help="parameter for updating the target network")
     parser.add_argument("--buffer-size", type=int, default=int(1e6), help="number of transitions can be stored in buffer")
     parser.add_argument("--batch-size", type=int, default=256, help="number of episodes to optimize at the same time")
 

@@ -60,6 +60,10 @@ class DQNAgent(object):
     def target_net_update(self):
         self.target.load_state_dict(self.eval.state_dict())
 
+    def soft_target_net_update(self):
+        for t_p, l_p in zip(self.target.parameters(), self.eval.parameters()):
+            t_p.data.copy_((1 - self.args.tau) * t_p.data + self.args.tau * l_p.data)
+
 
     def learn(self):
         Q_loss = 0
@@ -88,7 +92,8 @@ class DQNAgent(object):
         Q_loss += loss.detach().item()
 
         if self.total_step % self.args.update_rate == 0:
-            self.target_net_update()
+            # self.target_net_update()
+            self.soft_target_net_update()
         return Q_loss
 
     def evaluate_agent(self, n_starts=10):
