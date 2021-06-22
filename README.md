@@ -1,1 +1,45 @@
-# Code_With_RL
+# Code With Reinforcement Learning (Under Construction)
+
+## Single Agent Algorithm
+
+### Value Based
+
+- [ ] Deep Q Network(DQN) (off-policy)
+- [ ] Double Deep Q Network(Double DQN) (off-policy)
+- [ ] Dueling Deep Q Network(Dueling DQN) (off-policy)
+- [ ] Duelling Double Deep Q Network(D3QN) (off-policy)
+
+### Actor-Critic Method
+
+- [ ] Advantage Actor-Critic(A2C) (on-policy)
+- [ ] Asynchronous Advantage Actor-Critic(A3C) (on-policy)
+- [ ] Proximal Policy Optimization(PPO)(GAE) (on-policy)(Nearing off-policy)
+- [ ] Proximal Policy Gradient(PPG) (on-policy PPO + off-policy Critic[Let it share parameters with PPO's Critic])
+- [ ] Deep Deterministic Policy Gradient(DDPG) (off-policy)
+- [ ] Twin Delayed Deep Deterministic policy gradient(TD3) (off-policy)
+- [ ] Soft Actor-Critic(SAC) (off-policy)
+
+### Imitation Learning / Inverse Reinforcement Learning
+
+- [ ] Behavior Cloning
+- [ ] Generative Adversarial Imitation Learning(GAIL)
+
+### ReplayBuffer Structure
+
+- [ ] Prioritized Experience Replay
+- [ ] Hindsight Experience Replay
+
+----------------------------------------------------------------
+
+## Multi Agent Algorithm
+
+### Actor-Critic Method
+
+- [ ] Multi Agent Deep Deterministic Policy Gradient(MADDPG)
+- [ ] MADDPG Method TD3, SAC
+- [ ] Multi Agent Proximal Policy Optimization(MAPPO)
+- [ ] COMA
+
+### Value Based
+
+- [ ] QMIX
