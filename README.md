@@ -21,15 +21,14 @@
 
 ### Imitation Learning / Inverse Reinforcement Learning
 
-- [ ] Behavior Cloning
+- [ ] Behavior Cloning(BC)
 - [ ] Generative Adversarial Imitation Learning(GAIL)
 
 ### ReplayBuffer Structure
 
-- [ ] Prioritized Experience Replay
-- [ ] Hindsight Experience Replay
+- [ ] Prioritized Experience Replay(PER)
+- [ ] Hindsight Experience Replay(HER)
 
-----------------------------------------------------------------
 
 ## Multi Agent Algorithm
 
