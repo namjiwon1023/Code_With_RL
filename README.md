@@ -8,6 +8,7 @@
 - [x] Double Deep Q Network(Double DQN) (off-policy)
 - [x] Dueling Deep Q Network(Dueling DQN) (off-policy)
 - [x] Duelling Double Deep Q Network(D3QN) (off-policy)
+- [x] Noisy Networks for Exploration(NoisyDQN) (off-policy)
 
 ### Actor-Critic Method
 

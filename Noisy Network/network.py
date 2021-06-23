@@ -7,7 +7,7 @@ import numpy
 import math
 
 class NoisyLinear(nn.Module):
-    def __init__(self, in_features, out_features, std_init = 0.5):
+    def __init__(self, in_features, out_features, std_init=0.5):
         super(NoisyLinear, self).__init__()
 
         self.in_features = in_features
@@ -40,7 +40,7 @@ class NoisyLinear(nn.Module):
         self.bias_epsilon.copy_(epsilon_out)
 
     def forward(self, x):
-        return F.linear(x, self.weight_mu + self.weight_sigma * self.weight_epsilon, self.bias_mu + self.bias_sigma * self.bias_epsilon,)
+        return F.linear(x, self.weight_mu+self.weight_sigma*self.weight_epsilon, self.bias_mu+self.bias_sigma*self.bias_epsilon)
 
     @staticmethod
     def scale_noise(size):
@@ -57,7 +57,7 @@ class QNetwork(nn.Module):
 
         self.feature = nn.Linear(n_states, args.hidden_size)
 
-        self.noisy_layer1 = NoisyLinear(args.hidden_size, args.hidden_size),
+        self.noisy_layer1 = NoisyLinear(args.hidden_size, args.hidden_size)
 
         self.noisy_layer2 = NoisyLinear(args.hidden_size, n_actions)
 
