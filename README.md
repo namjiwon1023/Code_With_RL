@@ -4,8 +4,8 @@
 
 ### Value Based
 
-- [ ] Deep Q Network(DQN) (off-policy)
-- [ ] Double Deep Q Network(Double DQN) (off-policy)
+- [x] Deep Q Network(DQN) (off-policy)
+- [x] Double Deep Q Network(Double DQN) (off-policy)
 - [ ] Dueling Deep Q Network(Dueling DQN) (off-policy)
 - [ ] Duelling Double Deep Q Network(D3QN) (off-policy)
 
