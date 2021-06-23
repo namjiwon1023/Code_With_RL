@@ -15,7 +15,7 @@ class DQNAgent(object):
     def __init__(self, args):
 
         self.args = args
-        self.epsilon = args.max_epsilon
+        self.epsilon = 1.0
 
         self.env = gym.make(args.env_name)
         self.n_states = self.env.observation_space.shape[0]
@@ -49,12 +49,17 @@ class DQNAgent(object):
 
         s = T.FloatTensor(state).to(self.args.device)
 
-        if self.epsilon >= np.random.random():
+        if self.epsilon >= np.random.random() and not self.args.evaluate:
             choose_action = np.random.randint(0, self.n_actions)
+        elif self.args.evaluate:
+            choose_action = self.eval(s).argmax()
+            choose_action = choose_action.detach().cpu().numpy()
         else :
             choose_action = self.eval(s).argmax()
             choose_action = choose_action.detach().cpu().numpy()
-        self.transition = [state, choose_action]
+
+        if not self.args.evaluate:
+            self.transition = [state, choose_action]
         return choose_action
 
     def target_net_update(self):
@@ -92,8 +97,8 @@ class DQNAgent(object):
         Q_loss += loss.detach().item()
 
         if self.total_step % self.args.update_rate == 0:
-            # self.target_net_update()
-            self.soft_target_net_update()
+            self.target_net_update()
+            # self.soft_target_net_update()
         return Q_loss
 
     def evaluate_agent(self, n_starts=10):
