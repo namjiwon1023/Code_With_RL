@@ -15,25 +15,25 @@ def get_args():
     parser.add_argument("--episode", type=int, default=int(1e6), help="number of episode")
     parser.add_argument("--start_step", type=int, default=int(1e4), help="number of start")
 
-    parser.add_argument("--actor-lr", type=float, default=3e-4, help="learning rate of actor")
+    parser.add_argument("--actor-lr", type=float, default=1e-4, help="learning rate of actor")
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
     parser.add_argument("--hidden-size", type=int, default=128, help="hidden layer units")
 
     parser.add_argument("--target_update_interval", type=int, default=1, help="update rate")
 
-    parser.add_argument("--max_epsilon", type=float, default=1.0, help="max epsilon")
-    parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
-    parser.add_argument("--epsilon_decay", type=float, default=0.0001, help="epsilon decay")
+    # parser.add_argument("--max_epsilon", type=float, default=1.0, help="max epsilon")
+    # parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
+    # parser.add_argument("--epsilon_decay", type=float, default=0.0001, help="epsilon decay")
 
-    parser.add_argument("--Gaussian_noise", type=bool, default=False, help="use Gaussian noise")
+    parser.add_argument("--Gaussian_noise", type=bool, default=True, help="use Gaussian noise")
     parser.add_argument("--exploration_noise", type=float, default=0.1, help="Gaussian noise exploration")
 
     parser.add_argument("--ou_noise_theta", type=float, default=1.0, help="OU noise theta")
     parser.add_argument("--ou_noise_sigma", type=float, default=0.1, help="OU noise sigma")
 
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
-    parser.add_argument("--tau", type=float, default=5e-3, help="parameter for updating the target network")
+    parser.add_argument("--tau", type=float, default=0.01, help="parameter for updating the target network")
     parser.add_argument("--buffer-size", type=int, default=100000, help="number of transitions can be stored in buffer")
     parser.add_argument("--batch-size", type=int, default=128, help="number of episodes to optimize at the same time")
 
