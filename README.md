@@ -16,7 +16,7 @@
 - [ ] Asynchronous Advantage Actor-Critic(A3C) (on-policy)
 - [ ] Proximal Policy Optimization(PPO)(GAE) (on-policy)(Nearing off-policy)
 - [ ] Proximal Policy Gradient(PPG) (on-policy PPO + off-policy Critic[Let it share parameters with PPO's Critic])
-- [ ] Deep Deterministic Policy Gradient(DDPG) (off-policy)
+- [x] Deep Deterministic Policy Gradient(DDPG) (off-policy)
 - [ ] Twin Delayed Deep Deterministic policy gradient(TD3) (off-policy)
 - [ ] Soft Actor-Critic(SAC) (off-policy)
 
