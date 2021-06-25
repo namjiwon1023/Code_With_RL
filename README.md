@@ -35,8 +35,8 @@
 
 ### Actor-Critic Method
 
-- [ ] Multi Agent Deep Deterministic Policy Gradient(MADDPG)
-- [ ] MADDPG Method TD3, SAC
+- [x] Multi Agent Deep Deterministic Policy Gradient(MADDPG)
+- [x] MADDPG Method TD3, SAC
 - [ ] Multi Agent Proximal Policy Optimization(MAPPO)
 - [ ] COMA
 
