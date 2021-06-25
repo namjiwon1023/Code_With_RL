@@ -7,7 +7,7 @@ import random
 from tqdm import tqdm
 import time
 
-from algorithm.agent import TD3Agent
+from algorithm.agent import SACAgent
 from utils.utils import make_gif
 
 
@@ -52,7 +52,7 @@ class Runner:
                 score += reward
 
                 if self.agent.memory.ready(self.args.batch_size):
-                    q1_loss, q2_loss, critic_loss, actor_loss = self.agent.learn()
+                    q1_loss, q2_loss, critic_loss, actor_loss, alpha_loss = self.agent.learn()
                     n_updates += 1
                     self.epsilon = max(0.1, self.epsilon - self.args.epsilon_decay)
 
@@ -64,6 +64,7 @@ class Runner:
                     self.writer.add_scalar('Loss/Q2', q2_loss, n_updates)
                     self.writer.add_scalar('Loss/Critic', critic_loss, n_updates)
                     self.writer.add_scalar('Loss/Actor', actor_loss, n_updates)
+                    self.writer.add_scalar('Loss/Alpha', alpha_loss, n_updates)
                     self.writer.add_scalar('Loss/Epsilon', self.epsilon, self.agent.total_step)
                     self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
                     self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)

@@ -8,7 +8,7 @@ import random
 from tqdm import tqdm
 import time
 
-from algorithm.agent import TD3Agent
+from algorithm.agent import SACAgent
 from utils.utils import random_seed
 from utils.arguments import get_args
 from utils.runner import Runner
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     writer = SummaryWriter()
     random_seed(args.seed)
 
-    agent = TD3Agent(args)
+    agent = SACAgent(args)
 
     runner = Runner(agent, args, agent.env, writer)
 
