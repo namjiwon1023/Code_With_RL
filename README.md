@@ -17,7 +17,7 @@
 - [ ] Proximal Policy Optimization(PPO)(GAE) (on-policy)(Nearing off-policy)
 - [ ] Proximal Policy Gradient(PPG) (on-policy PPO + off-policy Critic[Let it share parameters with PPO's Critic])
 - [x] Deep Deterministic Policy Gradient(DDPG) (off-policy)
-- [ ] Twin Delayed Deep Deterministic policy gradient(TD3) (off-policy)
+- [x] Twin Delayed Deep Deterministic policy gradient(TD3) (off-policy)
 - [ ] Soft Actor-Critic(SAC) (off-policy)
 
 ### Imitation Learning / Inverse Reinforcement Learning
