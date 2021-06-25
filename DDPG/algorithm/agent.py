@@ -17,7 +17,6 @@ from utils.noise import OUNoise
 class DDPGAgent(object):
     def __init__(self, args):
         self.args = args
-        # self.epsilon = 1.0
 
         self.env = gym.make(args.env_name)
         self.env = RescaleAction(self.env, -1, 1)
@@ -58,13 +57,14 @@ class DDPGAgent(object):
 
         self.total_step = 0
 
-    def choose_action(self, state):
-        if self.total_step < self.args.start_step and not self.args.evaluate:
-            # choose_action = np.random.uniform(self.low_action, self.max_action, self.n_actions)
-            choose_action = self.env.action_space.sample()
+    def choose_action(self, state, epsilon):
+        # if self.total_step < self.args.start_step and not self.args.evaluate:
+        if epsilon >= np.random.random() and not self.args.evaluate:
+            choose_action = np.random.uniform(self.low_action, self.max_action, self.n_actions)
+            # choose_action = self.env.action_space.sample()
             # print('epsilon action :',choose_action)
         else :
-            choose_action = self.actor_eval(T.FloatTensor(state).to(self.actor_eval.device)).detach().cpu().numpy()
+            choose_action = self.actor_eval(T.as_tensor(state, device=self.actor_eval.device, dtype=T.float32)).detach().cpu().numpy()
             # print('train action : ', choose_action)
 
         if not self.args.evaluate:
@@ -100,8 +100,8 @@ class DDPGAgent(object):
         critic_loss.backward()
         self.critic_eval.optimizer.step()
 
-        # for p in self.critic_eval.parameters():
-        #         p.requires_grad = False
+        for p in self.critic_eval.parameters():
+                p.requires_grad = False
 
         actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean()
 
@@ -109,21 +109,21 @@ class DDPGAgent(object):
         actor_loss.backward()
         self.actor_eval.optimizer.step()
 
-        # for p in self.critic_eval.parameters():
-        #         p.requires_grad = True
+        for p in self.critic_eval.parameters():
+                p.requires_grad = True
 
         if self.total_step % self.args.target_update_interval == 0:
-            self.target_soft_update()
+            self._target_soft_update(self.actor_target, self.actor_eval, self.args.tau)
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
 
         return critic_loss.item(), actor_loss.item()
 
-    def target_soft_update(self):
+    def _target_soft_update(self, target_net, eval_net, tau=None):
+        if tau == None:
+            tau = self.args.tau
         with T.no_grad():
-            for t_p, l_p in zip(self.actor_target.parameters(), self.actor_eval.parameters()):
-                t_p.data.copy_(self.args.tau * l_p.data + (1 - self.args.tau) * t_p.data)
-            for t_p, l_p in zip(self.critic_target.parameters(), self.critic_eval.parameters()):
-                t_p.data.copy_(self.args.tau * l_p.data + (1 - self.args.tau) * t_p.data)
-
+            for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
+                t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
 
     def evaluate_agent(self, n_starts=10):
         reward_sum = 0
@@ -134,7 +134,7 @@ class DDPGAgent(object):
                 if self.args.evaluate:
                     self.env.render()
                 # time.sleep(0.02)
-                action = self.choose_action(state)
+                action = self.choose_action(state, 0)
                 next_state, reward, done, _ = self.env.step(action)
                 reward_sum += reward
                 state = next_state

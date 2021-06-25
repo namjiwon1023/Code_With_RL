@@ -27,7 +27,7 @@ def make_gif(policy, env, maxsteps=1000):
     while (not done) & (t< maxsteps):
         s = env.render('rgb_array')
         steps.append(s)
-        action = policy.choose_action(state)
+        action = policy.choose_action(state, 0)
         next_state, reward, done, _ = env.step(action)
         state = next_state
         rewards.append(reward)

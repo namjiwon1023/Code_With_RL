@@ -14,7 +14,7 @@ class CriticNetwork(nn.Module):
                                     nn.ReLU(),
                                     nn.Linear(args.hidden_size, args.hidden_size),
                                     nn.ReLU(),
-                                    nn.Linear(args.hidden_size, n_actions)
+                                    nn.Linear(args.hidden_size, 1)
                                     )
 
         self.reset_parameters(self.critic)
