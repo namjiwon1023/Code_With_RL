@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
     parser.add_argument("--epsilon_decay", type=float, default=0.0001, help="epsilon decay")
 
-    parser.add_argument("--Gaussian_noise", type=bool, default=True, help="use Gaussian noise")
+    parser.add_argument("--Gaussian_noise", type=bool, default=False, help="use Gaussian noise")
     parser.add_argument("--exploration_noise", type=float, default=0.1, help="Gaussian noise exploration")
 
     parser.add_argument("--ou_noise_theta", type=float, default=1.0, help="OU noise theta")
