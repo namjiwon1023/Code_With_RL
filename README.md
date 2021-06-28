@@ -22,7 +22,7 @@
 
 ### Imitation Learning / Inverse Reinforcement Learning
 
-- [ ] Behavior Cloning(BC)
+- [x] Behavior Cloning(BC)
 - [ ] Generative Adversarial Imitation Learning(GAIL)
 
 ### ReplayBuffer Structure
