@@ -4,11 +4,11 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.nn.utils import clip_grad_norm_
 import gym
 from gym.wrappers import RescaleAction
 import os
 from utils.utils import ppo_iter, compute_gae
+from utils.ReplayBuffer import ReplayBuffer
 
 from network.ActorNetwork import ActorNetwork
 from network.CriticNetwork import CriticNetwork
@@ -40,38 +40,51 @@ class PPOAgent(object):
 
         self.total_step = 0
 
-        self.log_probs = []
-        self.values    = []
-        self.states    = []
-        self.actions   = []
-        self.rewards   = []
-        self.masks     = []
+        self.memory = ReplayBuffer()
 
     def choose_action(self, state):
-        with T.no_grad():
-            state = T.as_tensor(state, dtype=T.float32, device=self.args.device)
-            action, dist = self.actor(state)
-            if self.args.evaluate:
-                choose_action = dist.mean()
-            else:
-                choose_action = action
-                value = self.critic(state)
-                self.values.append(value)
-                self.states.append(state)
-                self.actions.append(choose_action)
-                self.log_probs.append(dist.log_prob(choose_action))
+        state = T.FloatTensor(state).to(self.args.device)
+        print('state :', state)
+        choose_action, dist = self.actor(state)
+
+        if self.args.evaluate and not self.args.is_discrete:
+            choose_action = dist.mean
+
+        if not self.args.evaluate:
+            value = self.critic(state)
+            self.memory.values.append(value)
+            self.memory.states.append(state)
+            print('state array :', self.memory.states)
+            self.memory.actions.append(choose_action)
+            self.memory.log_probs.append(dist.log_prob(choose_action))
+
         return choose_action.detach().cpu().numpy()
 
     def learn(self, next_state):
-        next_state = T.as_tensor(next_state, dtype=T.float32, device=self.args.device)
+        next_state = T.FloatTensor(next_state).to(self.args.device)
         next_value = self.critic(next_state)
-        returns = compute_gae(next_value, self.rewards, self.masks, self.values, self.args.gamma, self.args.tau)
-        states = T.cat(self.states)
-        actions = T.cat(self.actions)
+
+        returns = compute_gae(next_value, self.memory.rewards, self.memory.masks, self.memory.values, self.args.gamma, self.args.tau)
+
+        states = T.cat(self.memory.states)
+        print('cat states :', states)
+        actions = T.cat(self.memory.actions)
         returns = T.cat(returns).detach()
-        values = T.cat(self.values).detach()
-        log_probs = T.cat(self.log_probs).detach()
+        values = T.cat(self.memory.values).detach()
+        log_probs = T.cat(self.memory.log_probs).detach()
+
+        # Here we calculate advantage A(s,a) = R + yV(s') - V(s)
+        # Returns = R + yV(s')
         advantages = returns - values
+
+        if self.args.is_discrete:
+            actions = actions.unsqueeze(1)
+            log_probs = log_probs.unsqueeze(1)
+
+        # Normalize the advantages
+        if self.args.standardize_advantage:
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
+
         actor_losses, critic_losses, total_losses = [], [], []
 
         for state, action, old_value, old_log_prob, return_, adv in ppo_iter(epoch = self.args.epoch,
@@ -84,50 +97,47 @@ class PPOAgent(object):
                                                                             advantages = advantages,
                                                                             ):
             _, dist = self.actor(state)
+
             entropy = dist.entropy().mean()
             log_prob = dist.log_prob(action)
+
             ratio = (log_prob - old_log_prob).exp()
+
             surr1 = ratio * adv
             surr2 = T.clamp(ratio, 1.0 - self.args.epsilon, 1.0 + self.args.epsilon) * adv
 
             actor_loss  = - T.min(surr1, surr2).mean()
 
             value = self.critic(state)
+
             if self.args.use_clipped_value_loss:
                 value_pred_clipped = old_value + T.clamp((value - old_value), - self.args.epsilon, self.args.epsilon)
                 value_loss_clipped = (return_ - value_pred_clipped).pow(2)
                 value_loss = (return_ - value).pow(2)
-                critic_loss = 0.5 * T.max(value_loss, value_loss_clipped).mean()
+                critic_loss = T.max(value_loss, value_loss_clipped).mean()
             else:
-                critic_loss = 0.5 * (return_ - value).pow(2).mean()
+                critic_loss = (return_ - value).pow(2).mean()
 
-            critic_loss_ = self.args.value_weight * critic_loss
-            actor_loss_ = actor_loss - self.args.entropy_weight * entropy
-            total_loss = critic_loss_ + actor_loss_
+            total_loss = self.args.value_weight * critic_loss + actor_loss - entropy * self.args.entropy_weight
 
             self.critic.optimizer.zero_grad()
-            critic_loss_.backward(retain_graph=True)
-            clip_grad_norm_(self.critic.parameters(), self.args.critic_clip)
-            self.critic.optimizer.step()
-
             self.actor.optimizer.zero_grad()
-            actor_loss_.backward()
-            clip_grad_norm_(self.actor.parameters(), self.args.actor_clip)
+            total_loss.backward()
+            self.critic.optimizer.step()
             self.actor.optimizer.step()
 
             actor_losses.append(actor_loss.item())
             critic_losses.append(critic_loss.item())
             total_losses.append(total_loss.item())
 
-        self.states, self.actions, self.rewards = [], [], []
-        self.values, self.masks, self.log_probs = [], [], []
+        self.memory.clear()
 
         actor_loss = sum(actor_losses) / len(actor_losses)
         critic_loss = sum(critic_losses) / len(critic_losses)
         total_loss = sum(total_losses) / len(total_losses)
 
         return actor_loss, critic_loss, total_loss
-
+        # return total_loss
 
     def evaluate_agent(self, n_starts=10):
         reward_sum = 0

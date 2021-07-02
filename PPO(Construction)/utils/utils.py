@@ -3,24 +3,45 @@ import numpy as np
 import random
 from moviepy.editor import ImageSequenceClip
 import os
+from collections import deque
 
-
-def compute_gae(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
+def compute_gae(
+    next_value,
+    rewards,
+    masks,
+    values,
+    gamma = 0.99,
+    tau = 0.95,
+    ):
     values = values + [next_value]
     gae = 0
-    returns = []
+    returns = deque()
+
     for step in reversed(range(len(rewards))):
         delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
         gae = delta + gamma * tau * masks[step] * gae
-        returns.insert(0, gae + values[step])
-    return returns
+        returns.appendleft(gae + values[step])
 
-def ppo_iter(epoch, mini_batch_size, states, actions, values, log_probs, returns, advantages):
+    return list(returns)
+
+
+def ppo_iter(
+    epoch,
+    mini_batch_size,
+    states,
+    actions,
+    values,
+    log_probs,
+    returns,
+    advantages,
+    ):
     batch_size = states.size(0)
     for _ in range(epoch):
         for _ in range(batch_size // mini_batch_size):
             rand_ids = np.random.choice(batch_size, mini_batch_size)
-            yield states[rand_ids, :], actions[rand_ids], values[rand_ids], log_probs[rand_ids], returns[rand_ids], advantages[rand_ids]
+            yield states[rand_ids, :], actions[rand_ids, :], values[
+                rand_ids, :
+            ], log_probs[rand_ids, :], returns[rand_ids, :], advantages[rand_ids, :]
 
 
 def random_seed(seed):
@@ -46,7 +67,7 @@ def make_gif(policy, env, maxsteps=1000):
     while (not done) & (t< maxsteps):
         s = env.render('rgb_array')
         steps.append(s)
-        action = policy.choose_action(state, 0)
+        action = policy.choose_action(state)
         next_state, reward, done, _ = env.step(action)
         state = next_state
         rewards.append(reward)
