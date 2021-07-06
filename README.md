@@ -49,7 +49,8 @@
 
 Simply run:
 
-`python main.py`
+To train a new network : run `python main.py`
+To test a preTrained network : run `python main.py --evaluate=True`
 
 for default args. Changeable args are(For detailed training hyperparameters, please view `utils/arguments.py`):
 ```
