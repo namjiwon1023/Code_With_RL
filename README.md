@@ -47,6 +47,13 @@
 
 ## Quick Start
 
+Installation:
+
+```
+git clone https://github.com/namjiwon1023/Code_With_RL.git
+cd Code_With_RL
+```
+
 Simply run:
 
 To train a new network : run `python main.py`
@@ -75,3 +82,21 @@ for default args. Changeable args are(For detailed training hyperparameters, ple
 --evaluate: whether to evaluate the model (Default: False)
 --evaluate-rate: how often to evaluate model (Default: 1000)
 ```
+
+## Requirements
+
+```
+Python 3.6+
+[Pytorch 1.6+](https://pytorch.org/get-started/locally/)
+Numpy
+[openai gym](https://github.com/openai/gym)
+matplotlib
+tqdm
+tensorboard
+
+```
+
+
+## References
+
+* 
