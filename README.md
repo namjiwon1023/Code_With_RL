@@ -30,6 +30,10 @@
 - [ ] Prioritized Experience Replay(PER)
 - [ ] Hindsight Experience Replay(HER)
 
+### Explore
+
+- [ ] Intrinsic Curiosity Module(ICM)
+
 
 ## Multi Agent Algorithm
 
@@ -47,14 +51,14 @@
 
 ## Quick Start
 
-Installation:
+**Installation**:
 
 ```
 git clone https://github.com/namjiwon1023/Code_With_RL.git
 cd Code_With_RL
 ```
 
-Simply run:
+**Simply run**:
 
 To train a new network : run `python main.py`
 To test a preTrained network : run `python main.py --evaluate=True`
@@ -87,9 +91,9 @@ for default args. Changeable args are(For detailed training hyperparameters, ple
 
 ```
 Python 3.6+
-[Pytorch 1.6+](https://pytorch.org/get-started/locally/)
+Pytorch 1.6+ : https://pytorch.org/get-started/locally/
 Numpy
-[openai gym](https://github.com/openai/gym)
+openai gym : https://github.com/openai/gym
 matplotlib
 tqdm
 tensorboard
@@ -98,5 +102,3 @@ tensorboard
 
 
 ## References
-
-* 
