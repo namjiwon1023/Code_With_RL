@@ -15,7 +15,8 @@ from utils.runner import Runner
 
 if __name__ == '__main__':
     args = get_args()
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
+    writer = None
     random_seed(args.seed)
 
     agent = PPOAgent(args)

@@ -4,15 +4,9 @@ import random
 from moviepy.editor import ImageSequenceClip
 import os
 from collections import deque
+import matplotlib.pyplot as plt
 
-def compute_gae(
-    next_value,
-    rewards,
-    masks,
-    values,
-    gamma = 0.99,
-    tau = 0.95,
-    ):
+def compute_gae(next_value, rewards, masks, values, gamma = 0.99, tau = 0.95,):
     values = values + [next_value]
     gae = 0
     returns = deque()
@@ -25,23 +19,12 @@ def compute_gae(
     return list(returns)
 
 
-def ppo_iter(
-    epoch,
-    mini_batch_size,
-    states,
-    actions,
-    values,
-    log_probs,
-    returns,
-    advantages,
-    ):
+def ppo_iter(epoch, mini_batch_size, states, actions, values, log_probs, returns, advantages,):
     batch_size = states.size(0)
     for _ in range(epoch):
         for _ in range(batch_size // mini_batch_size):
             rand_ids = np.random.choice(batch_size, mini_batch_size)
-            yield states[rand_ids, :], actions[rand_ids, :], values[
-                rand_ids, :
-            ], log_probs[rand_ids, :], returns[rand_ids, :], advantages[rand_ids, :]
+            yield states[rand_ids, :], actions[rand_ids, :], values[rand_ids, :], log_probs[rand_ids, :], returns[rand_ids, :], advantages[rand_ids, :]
 
 
 def random_seed(seed):
@@ -102,3 +85,22 @@ def make_gif_for_train(policy, env, step_count, state_filter, maxsteps=1000):
     if not os.path.isdir('gifs'):
         os.makedirs('gifs')
     clip.write_gif('gifs/{}.gif'.format(gif_name), fps=30)
+
+
+
+def _plot(scores):
+    z = [c+1 for c in range(len(scores))]
+    running_avg = np.zeros(len(scores))
+    for e in range(len(running_avg)):
+        running_avg[e] = np.mean(scores[max(0, e-10):(e+1)])
+    plt.cla()
+    plt.title("Return")
+    plt.grid(True)
+    plt.xlabel("Episode")
+    plt.ylabel("Total reward")
+    plt.plot(scores, "r-", linewidth=1.5, label="episode_reward")
+    plt.plot(z, running_avg, "b-", linewidth=1.5, label="avg_reward")
+    plt.legend(loc="best", shadow=True)
+    plt.pause(0.1)
+    plt.savefig('./sac.jpg')
+    plt.show()

@@ -14,31 +14,31 @@ def get_args():
     parser.add_argument("--time-steps", type=int, default=3000000, help="number of time steps")
     parser.add_argument("--episode", type=int, default=int(1e6), help="number of episode")
 
-    parser.add_argument("--actor-lr", type=float, default=3e-4, help="learning rate of actor")
-    parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
+    parser.add_argument("--actor-lr", type=float, default=1e-4, help="learning rate of actor")
+    parser.add_argument("--critic-lr", type=float, default=1e-4, help="learning rate of critic")
 
     parser.add_argument("--min_log_std", type=float, default=-20, help="min_log_std")
     parser.add_argument("--max_log_std", type=float, default=0, help="max_log_std")
 
-    parser.add_argument("--hidden-size", type=int, default=64, help="hidden layer units")
+    parser.add_argument("--hidden-size", type=int, default=128, help="hidden layer units")
 
     parser.add_argument("--value_weight", type=float, default=0.5, help="value_weight")
-    parser.add_argument("--entropy_weight", type=float, default=0.01, help="entropy_weight")
+    parser.add_argument("--entropy_weight", type=float, default=0.01, help="could be 0.02")
 
-    parser.add_argument("--epsilon", type=float, default=0.2, help="epsilon")
-    parser.add_argument("--tau", type=float, default=0.95, help="tau")
+    parser.add_argument("--epsilon", type=float, default=0.3, help="ratio.clamp(1 - clip, 1 + clip)")
+    parser.add_argument("--tau", type=float, default=0.98, help="could be 0.95~0.99, GAE (Generalized Advantage Estimation. ICLR.2016.)")
 
-    parser.add_argument("--max_ep_len", type=int, default=300, help="max epsilon length")
-    parser.add_argument("--update_step", type=int, default=1200, help="max_ep_len * 4")
-    parser.add_argument("--epoch", type=int, default=64, help="number of epoch")
-    parser.add_argument("--use_clipped_value_loss", type=bool, default=True, help="")
+    parser.add_argument("--max_ep_len", type=int, default=1200, help="max epsilon length")
+    parser.add_argument("--update_step", type=int, default=4800, help="max_ep_len * 4")
+    parser.add_argument("--epoch", type=int, default=128, help="number of epoch")
+    parser.add_argument("--use_clipped_value_loss", type=bool, default=False, help="")
     parser.add_argument("--is_discrete", type=bool, default=False, help="")
-    parser.add_argument("--standardize_advantage", type=bool, default=True, help="")
+    parser.add_argument("--standardize_advantage", type=bool, default=False, help="")
 
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
 
     parser.add_argument("--buffer-size", type=int, default=100000, help="number of transitions can be stored in buffer")
-    parser.add_argument("--batch-size", type=int, default=64, help="number of episodes to optimize at the same time")
+    parser.add_argument("--batch-size", type=int, default=128, help="number of episodes to optimize at the same time")
 
     parser.add_argument("--save-dir", type=str, default="./model", help="directory in which training state and model should be saved")
     parser.add_argument("--save-rate", type=int, default=2000, help="save model once every time this many episodes are completed")

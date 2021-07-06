@@ -9,45 +9,52 @@ from torch.distributions import Normal
 import numpy as np
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_states, n_actions, args, max_action=None):
+    def __init__(self, n_states, n_actions, args):
         super(ActorNetwork, self).__init__()
         self.args = args
         self.device = args.device
-        self.min_log_std = args.min_log_std
-        self.max_log_std = args.max_log_std
-        self.max_action = max_action
+        # self.min_log_std = args.min_log_std
+        # self.max_log_std = args.max_log_std
+        # self.max_action = max_action
         self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'ppo_actor.pth')
 
-        self.feature = nn.Sequential(nn.Linear(n_states, args.hidden_size),
-                                    nn.ReLU()
-                                    )
-        self.mu = nn.Sequential(nn.Linear(args.hidden_size, n_actions),
-                                nn.Tanh()
+        # self.feature = nn.Sequential(nn.Linear(n_states, args.hidden_size),
+        #                             nn.ReLU()
+        #                             )
+        # self.mu = nn.Sequential(nn.Linear(args.hidden_size, n_actions),
+        #                         )
+        # self.log_std = nn.Sequential(nn.Linear(args.hidden_size, n_actions),
+        #                             )
+
+        self.mu = nn.Sequential(nn.Linear(n_states, args.hidden_size),
+                                nn.ReLU(),
+                                nn.Linear(args.hidden_size, args.hidden_size),
+                                nn.ReLU(),
+                                nn.Linear(args.hidden_size, n_actions),
                                 )
-        self.log_std = nn.Sequential(nn.Linear(args.hidden_size, n_actions),
-                                    nn.Tanh()
-                                    )
 
-        self.reset_parameters(self.feature)
+        self.log_std = nn.Parameter(T.zeros((1, n_actions)) -0.5, requires_grad=True)
+        # self.reset_parameters(self.feature)
         self.reset_parameters(self.mu)
-        self.reset_parameters(self.log_std)
+        # self.reset_parameters(self.log_std)
 
-        self.optimizer = optim.Adam(self.parameters(), lr=args.actor_lr)
+        # self.optimizer = optim.Adam(self.parameters(), lr=args.actor_lr)
 
         self.to(self.device)
 
     def forward(self, state):
-        feature = self.feature(state)
-        mu = self.mu(feature)
-        log_std = self.log_std(feature)
-        log_std = self.min_log_std + 0.5 * (self.max_log_std - self.min_log_std) * (log_std + 1)
-        std = T.exp(log_std)
+        # feature = self.feature(state)
+        mu = self.mu(state)
+        # log_std = self.log_std(feature)
+        # log_std = self.min_log_std + 0.5 * (self.max_log_std - self.min_log_std) * (log_std + 1)
+        std = T.exp(self.log_std).expand_as(mu)
 
-        dist = Normal(mu, std)
-        action = dist.sample()
+        # dist = Normal(mu, std)
+        # action = dist.sample()
 
-        if self.max_action == None: return T.tanh(action), dist
-        return self.max_action*T.tanh(action), dist
+        # if self.max_action == None: return action, dist
+        # return self.max_action*action, dist
+        return mu, std
 
 
     def reset_parameters(self, Sequential, std=1.0, bias_const=1e-6):

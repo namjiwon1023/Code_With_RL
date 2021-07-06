@@ -17,11 +17,13 @@ class CriticNetwork(nn.Module):
 
         self.critic = nn.Sequential(nn.Linear(n_states, args.hidden_size),
                                     nn.ReLU(),
+                                    nn.Linear(args.hidden_size, args.hidden_size),
+                                    nn.ReLU(),
                                     nn.Linear(args.hidden_size, 1)
                                     )
 
         self.reset_parameters(self.critic)
-        self.optimizer = optim.Adam(self.parameters(), lr=args.critic_lr)
+        # self.optimizer = optim.Adam(self.parameters(), lr=args.critic_lr)
 
         self.to(self.device)
 
