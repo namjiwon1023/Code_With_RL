@@ -12,7 +12,7 @@
 
 ### Actor-Critic Method
 
-- [ ] Advantage Actor-Critic(A2C) (on-policy)
+- [x] Advantage Actor-Critic(A2C) (on-policy)
 - [ ] Asynchronous Advantage Actor-Critic(A3C) (on-policy)
 - [x] Proximal Policy Optimization(PPO)(GAE) (on-policy)(Nearing off-policy)
 - [ ] Proximal Policy Gradient(PPG) (on-policy PPO + off-policy Critic[Let it share parameters with PPO's Critic])
