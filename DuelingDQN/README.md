@@ -21,7 +21,7 @@ Q-learning 은 어떤 state s 에 대해 각 action a 의 state-action value fun
 아래는 이를 위한 네트워크 구조로, V(s) 와 A(s,a) 는 네트워크 파라메터를 상당 부분 공유할 수 있다.
 
 ![dueling-dqn](https://github.com/namjiwon1023/Code_With_RL/blob/main/assets/rl/dqn-duel.png)
-*위는 기존 DQN 의 Q-network. 아래는 Dueling DQN. V 와 A 값을 각각 예측하여 Q 를 만들어낸다.*
+<center>위는 기존 DQN 의 Q-network. 아래는 Dueling DQN. V 와 A 값을 각각 예측하여 Q 를 만들어낸다.</center>
 
 
 ### [Trained Results]
