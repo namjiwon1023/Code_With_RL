@@ -1,3 +1,5 @@
+[HOME](https://github.com/namjiwon1023/Code_With_RL)
+
 # Deep Q-learning
 
 여기서는 Q-learning 에 기반한 알고리즘들을 다루고, 이러한 알고리즘들을 통합적으로 적용하여 성능을 개선한 Rainbow 까지 살펴본다.
@@ -5,6 +7,10 @@
 ## DQN
 
 Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning." Nature 518.7540 (2015): 529.
+
+​	[`PAPER`](https://arxiv.org/pdf/1312.5602.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/DQN/agent.py)
+
+<br/>
 
 - Key idea: Q-learning with deep learning + experience replay + freeze target network
 
