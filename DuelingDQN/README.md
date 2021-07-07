@@ -8,7 +8,7 @@
 
 Wang, Ziyu, et al. "Dueling network architectures for deep reinforcement learning." arXiv preprint arXiv:1511.06581 (2015).
 
-​	[`PAPER`](https://arxiv.org/pdf/1511.06581.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/DuelingDQN/agent.py)
+​	[`PAPER`](https://arxiv.org/pdf/1511.06581.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/D3QN/network.py)
 
 <br/>
 
