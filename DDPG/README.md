@@ -268,7 +268,7 @@ DDPG와 같은 접근방식에는 몇가지 **한계점**이 존재한다.
 그러나 robust model-free approach가 이러한 한계점들을 이겨낼 정도로 더 큰 문제를 해결하기 위해서는 중요하게 작용할 것임을 믿어 의심치 않는다.
 
 
-### [Result]
+### [Trained Results]
 
 #### Gaussian noise DDPG
 ![example](./gifs/Pendulum-v0.gif)
