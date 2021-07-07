@@ -14,9 +14,7 @@ Policy gradient theorem 을 통해 얻을 수 있는 (vanilla) policy gradient �
 
 여기서 여러가지 변주를 줄 수 있는데, GAE 논문에 잘 정리되어 있다.
 
-<div class="imgc">
 ![pg-gae](https://github.com/namjiwon1023/Code_With_RL/blob/main/assets/rl/pg-gae.png)
-</div>
 
 여기서 1, 2번이 REINFORCE 에 해당하고, 3번이 REINFORCE with baseline, 4, 5, 6번이 Actor-Critic 에 해당한다.
 
