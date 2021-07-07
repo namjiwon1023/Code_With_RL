@@ -10,6 +10,8 @@ Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning
 
 DQN 은 Q-learning 에 function approximator 로 deep learning 을 사용한 버전이다. 딥마인드가 Atari 게임을 풀면서 유명해졌다. Q-learning 에서 Q-function 을 업데이트하는 Loss function 을 다음과 같이 사용한다:
 
+
+![example](http://chart.googleapis.com/chart?cht=tx&chl=\Large L(\theta)=\left( y-Q_\theta(s,a) \right)^2)
 $$
 L(\theta)=\left( y-Q_\theta(s,a) \right)^2
 $$
