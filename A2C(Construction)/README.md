@@ -10,7 +10,7 @@ NPG, TRPO, PPO:
 
 Policy gradient theorem 을 통해 얻을 수 있는 (vanilla) policy gradient 수식은 다음과 같다:
 
-<img src="http://chart.googleapis.com/chart?cht=tx&chl=\nabla_\thetaJ(\pi_\theta)=E_{\tau\sim \pi_\theta} \left[ \sum^T_{t=0} Q^{\pi_\theta} (s_t, a_t) \nabla_\theta \log \pi_\theta (a_t|s_t) \right]" style="border:none;">
+<img src="http://chart.googleapis.com/chart?cht=tx&chl=\nabla_\theta\J(\pi_\theta)=E_{\tau\sim \pi_\theta} \left[ \sum^T_{t=0} Q^{\pi_\theta} (s_t, a_t) \nabla_\theta \log \pi_\theta (a_t|s_t) \right]" style="border:none;">
 
 
 여기서 여러가지 변주를 줄 수 있는데, GAE 논문에 잘 정리되어 있다.
