@@ -25,7 +25,7 @@ Williams, Ronald J. "Simple statistical gradient-following algorithms for connec
 
 REINFORCE 는 위 피규어에서 1, 2, 3 에 해당하는 방법론이다. 이 세가지 수식이 전부 같은 expectation 값을 갖는데, 앞쪽 수식일수록 variance 가 크다. Q-learning 계열도 마찬가지지만 PG 계열에서도 expectation 을 sampling 으로 대체하게 되는데, 여기서 발생하는 variance 를 잡는 것이 주요한 챌린지가 되며, REINFORCE 에서도 variance 를 줄이기 위한 노력들을 엿볼 수 있다.
 
-<img src="http://chart.googleapis.com/chart?cht=tx&chl=\nabla_\theta J(\pi_\theta)=\mathbb E_{\tau\sim \pi_\theta} \left[ \sum^T_{t=0} (G_t-b(s_t)) \nabla_\theta \log \pi_\theta (a_t|s_t) \right]" style="border:none;">
+<img src="http://chart.googleapis.com/chart?cht=tx&chl=\nabla_\theta\, J(\pi_\theta)=\mathbb E_{\tau\sim \pi_\theta} \left[ \sum^T_{t=0} (G_t-b(s_t)) \nabla_\theta \log \pi_\theta (a_t|s_t) \right]" style="border:none;">
 
 여기서   <img src="http://chart.googleapis.com/chart?cht=tx&chl=G_t" style="border:none;"> 
 는 timestep t 에서의 expected return, <img src="http://chart.googleapis.com/chart?cht=tx&chl=b(s_t)" style="border:none;">  는 baseline 에 해당한다. REINFORCE 는 return G 를 알아야 하기 때문에 하나의 에피소드가 끝나야만 학습을 수행할 수 있다.
