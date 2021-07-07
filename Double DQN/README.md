@@ -8,7 +8,7 @@
 
 Van Hasselt, Hado, Arthur Guez, and David Silver. "Deep reinforcement learning with double q-learning." Thirtieth AAAI Conference on Artificial Intelligence. 2016.​
 
-	[`PAPER`](https://arxiv.org/pdf/1509.06461.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Double%20DQN/agent.py)
+​	[`PAPER`](https://arxiv.org/pdf/1509.06461.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Double%20DQN/agent.py)
 
 <br/>
 
@@ -18,7 +18,7 @@ Q-learning 이 갖는 고질적인 문제점 중 over-estimation bias 라는 문
 
 이 문제를 해결하기 위해 나온 방법이 double Q-learning 으로, Q-function 을 2개 사용하여 어쩌다 Q-value 가 좋은 값으로 튀더라도 바로 다른 state 들로 전파되지 않게 막는다. 
 
-![example](./assets/rl/dqn-dql.png)
+![example](https://github.com/namjiwon1023/Code_With_RL/blob/main/assets/rl/dqn-dql.png)
 *Pseudo code of double Q-learning*
 
 위는 서튼책에서 가져온 double Q-learning 의 수도코드다. 이와 같이 Q-function 을 2개 사용하고, 실제로 target 값을 계산하는 Q-function 과 maximum action 을 결정하는 Q-function 을 분리한다. 따라서 두 함수중 하나가 잘못된 값으로 "튀어" 있는 상태더라도 최종적으로 계산되는 target 값은 정상적인 값이 나오게 된다.
