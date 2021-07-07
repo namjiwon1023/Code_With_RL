@@ -27,9 +27,9 @@ NoisyNet 은 네트워크의 weight 에 perturbation 을 주어 exploration 을 
 
 이를 그림으로 표현하면 다음과 같다:
 
-![noisynet](https://github.com/namjiwon1023/Code_With_RL/blob/main/assets/rl/dqn-noisynet.png){:.center width="30%"}
+![noisynet](https://github.com/namjiwon1023/Code_With_RL/blob/main/assets/rl/dqn-noisynet.png)
 
-<center>여기서 <img src="http://chart.googleapis.com/chart?cht=tx&chl=\mu" style="border:none;"> 와 <img src="http://chart.googleapis.com/chart?cht=tx&chl=\sigma" style="border:none;"> 는 learnable parameter 이고, <img src="http://chart.googleapis.com/chart?cht=tx&chl=\epsilon" style="border:none;"> 은 학습이 안 되는 noise 에 해당한다.</center>
+여기서 <img src="http://chart.googleapis.com/chart?cht=tx&chl=\mu" style="border:none;"> 와 <img src="http://chart.googleapis.com/chart?cht=tx&chl=\sigma" style="border:none;"> 는 learnable parameter 이고, <img src="http://chart.googleapis.com/chart?cht=tx&chl=\epsilon" style="border:none;"> 은 학습이 안 되는 noise 에 해당한다.
 
 
 ### [Trained Results]
