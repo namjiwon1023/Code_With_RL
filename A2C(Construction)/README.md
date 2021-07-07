@@ -26,7 +26,8 @@ REINFORCE 는 위 피규어에서 1, 2, 3 에 해당하는 방법론이다. 이 
 
 <img src="http://chart.googleapis.com/chart?cht=tx&chl=\nabla_\theta J(\pi_\theta)=\mathbb E_{\tau\sim \pi_\theta} \left[ \sum^T_{t=0} (G_t-b(s_t)) \nabla_\theta \log \pi_\theta (a_t|s_t) \right]" style="border:none;">
 
-여기서 $G_t$ 는 timestep t 에서의 expected return, $b(s_t)$ 는 baseline 에 해당한다. REINFORCE 는 return G 를 알아야 하기 때문에 하나의 에피소드가 끝나야만 학습을 수행할 수 있다.
+여기서   <img src="http://chart.googleapis.com/chart?cht=tx&chl=G_t" style="border:none;"> 
+는 timestep t 에서의 expected return, <img src="http://chart.googleapis.com/chart?cht=tx&chl=b(s_t)" style="border:none;">  는 baseline 에 해당한다. REINFORCE 는 return G 를 알아야 하기 때문에 하나의 에피소드가 끝나야만 학습을 수행할 수 있다.
 
 ## Actor-Critic
 
