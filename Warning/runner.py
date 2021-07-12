@@ -79,7 +79,7 @@ class Runner:
 
             if avg_score > best_score:
                 best_score = avg_score
-                _save_model(self.agent.eval)
+                self.agent.save_models()
 
             if self.agent.total_step >= self.args.time_steps or avg_score == 200:
                 print('Reach the maximum number of training steps ！')

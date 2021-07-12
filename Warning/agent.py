@@ -11,7 +11,7 @@ import time
 from network import QNetwork
 from replaybuffer import ReplayBuffer
 
-from utils import _target_net_update, _target_soft_update, compute_gae, ppo_iter, _load_model
+from utils import _target_net_update, _target_soft_update, compute_gae, ppo_iter, _load_model, _save_model
 
 class DQNAgent(object):
     def __init__(self, args):
@@ -46,7 +46,7 @@ class DQNAgent(object):
             os.mkdir(self.model_path)
 
         if os.path.exists(self.model_path + '/DQN.pth'):
-            _load_model(self.eval)
+            self.load_models()
 
         self.total_step = 0
 
@@ -92,3 +92,9 @@ class DQNAgent(object):
             _target_net_update(self.eval, self.target)
 
         return Q_loss
+
+    def save_models(self):
+        _save_model(self.eval)
+
+    def load_models(self):
+        _load_model(self.eval)
