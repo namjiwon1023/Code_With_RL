@@ -1,0 +1,20 @@
+# Dueling Deep Q Network
+# You can modify the hyperparameters here
+
+algorithm: 'Dueling_dqn'
+critic_lr: 0.001      # learning rate
+gamma: 0.99           # discount factor
+tau: 0.01             # parameter for updating the target network(soft update)
+hidden_size: 128      # hidden layer units
+update_rate: 100      # target network hard update rate
+buffer_size: 1000     # number of transitions can be stored in buffer
+batch_size: 32        # number of episodes to optimize at the same time
+
+# explore
+epsilon: 1.0      # Probability of performing a random action
+min_epsilon: 0.1      # Probability of performing a random action
+epsilon_decay: 0.0005 # attenuation rate
+
+use_epsilon: True
+is_discrete: True
+
