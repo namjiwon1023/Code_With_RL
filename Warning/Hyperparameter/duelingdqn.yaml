@@ -1,7 +1,7 @@
 # Dueling Deep Q Network
 # You can modify the hyperparameters here
 
-algorithm: 'Dueling_dqn'
+algorithm: 'Dueling_DQN'
 critic_lr: 0.001      # learning rate
 gamma: 0.99           # discount factor
 tau: 0.01             # parameter for updating the target network(soft update)
@@ -18,3 +18,4 @@ epsilon_decay: 0.0005 # attenuation rate
 use_epsilon: True
 is_discrete: True
 
+use_noisy_layer: False

@@ -14,7 +14,10 @@ from utils import _make_gif, _evaluate_agent, _save_model
 class Runner:
     def __init__(self, agent, args, env, writer):
         self.args = args
-        self.epsilon = args.epsilon
+        if self.args.use_epsilon:
+            self.epsilon = args.epsilon
+        else:
+            self.epsilon = None
         self.episode_limit = env.spec.max_episode_steps
         self.env = env
         self.agent = agent
@@ -55,16 +58,17 @@ class Runner:
                 score += reward
 
                 if self.agent.memory.ready(self.args.batch_size):
-                    Q_loss = self.agent.learn()
+                    self.agent.learn()
                     n_updates += 1
-                    self.epsilon = max(0.1, self.epsilon - self.args.epsilon_decay)
+                    if self.args.use_epsilon:
+                        self.epsilon = max(0.1, self.epsilon - self.args.epsilon_decay)
+                    else:
+                        self.epsilon = None
 
                 if self.agent.total_step % self.args.evaluate_rate == 0 and self.agent.memory.ready(self.args.batch_size):
                     running_reward = np.mean(scores[-10:])
                     eval_reward = _evaluate_agent(self.env, self.agent, self.args, n_starts=self.args.evaluate_episodes)
                     eval_rewards.append(eval_reward)
-                    self.writer.add_scalar('Loss/Q', Q_loss, n_updates)
-                    self.writer.add_scalar('Epsilon', self.epsilon, self.agent.total_step)
                     self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
                     self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)
                     print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, round(score, 2), round(eval_reward, 2), round(avg_score, 2)))

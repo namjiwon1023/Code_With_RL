@@ -12,19 +12,19 @@ def get_args():
     parser.add_argument("-eval", "--evaluate", type=bool, default=False)
     args = parser.parse_args()
     if args.evaluate:
-        if args.algorithm == 'dqn':
+        if args.algorithm == 'DQN':
             params = './Hyperparameter/dqn.yaml'
 
-        if args.algorithm == 'ddqn':
+        if args.algorithm == 'Double_DQN':
             params = './Hyperparameter/doubledqn.yaml'
 
-        if args.algorithm == 'd3qn':
+        if args.algorithm == 'D3QN':
             params = './Hyperparameter/d3qn.yaml'
 
-        if args.algorithm == 'duelingdqn':
+        if args.algorithm == 'Dueling_DQN':
             params = './Hyperparameter/duelingdqn.yaml'
 
-        if args.algorithm == 'noisydqn':
+        if args.algorithm == 'Noisy_DQN':
             params = './Hyperparameter/noisydqn.yaml'
 
         cfg = _read_yaml(params)
@@ -47,19 +47,19 @@ def get_args():
         else:
             args.env_name = 'Pendulum-v0'
     else:
-        if args.algorithm == 'dqn':
+        if args.algorithm == 'DQN':
             params = './Hyperparameter/dqn.yaml'
 
-        if args.algorithm == 'ddqn':
+        if args.algorithm == 'Double_DQN':
             params = './Hyperparameter/doubledqn.yaml'
 
-        if args.algorithm == 'd3qn':
+        if args.algorithm == 'D3QN':
             params = './Hyperparameter/d3qn.yaml'
 
-        if args.algorithm == 'duelingdqn':
+        if args.algorithm == 'Dueling_DQN':
             params = './Hyperparameter/duelingdqn.yaml'
 
-        if args.algorithm == 'noisydqn':
+        if args.algorithm == 'Noisy_DQN':
             params = './Hyperparameter/noisydqn.yaml'
 
         cfg = _read_yaml(params)

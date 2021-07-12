@@ -8,7 +8,7 @@ import copy
 import gym
 import time
 
-from network import QNetwork
+from network import QNetwork, DuelingNetwork
 from replaybuffer import ReplayBuffer
 
 from utils import _target_net_update, _target_soft_update, compute_gae, ppo_iter, _load_model, _save_model
@@ -21,6 +21,8 @@ class DQNAgent(object):
         self.env = gym.make(args.env_name)
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
+
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'DQN.pth')
 
         self.eval = QNetwork(self.n_states, self.n_actions, args)
 
@@ -63,8 +65,6 @@ class DQNAgent(object):
         return choose_action
 
     def learn(self):
-        Q_loss = 0
-
         with T.no_grad():
             samples = self.memory.sample_batch(self.args.batch_size)
 
@@ -86,15 +86,339 @@ class DQNAgent(object):
         loss.backward()
         self.optimizer.step()
 
-        Q_loss += loss.detach().item()
+        if self.total_step % self.args.update_rate == 0:
+            _target_net_update(self.eval, self.target)
+
+    def save_models(self):
+        _save_model(self.eval, self.checkpoint)
+
+    def load_models(self):
+        _load_model(self.eval, self.checkpoint)
+
+class DoubleDQNAgent(object):
+    def __init__(self, args):
+
+        self.args = args
+
+        self.env = gym.make(args.env_name)
+        self.n_states = self.env.observation_space.shape[0]
+        self.n_actions = self.env.action_space.n
+
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'DoubleDQN.pth')
+
+        self.eval = QNetwork(self.n_states, self.n_actions, args)
+
+        self.target = copy.deepcopy(self.eval)
+        self.target.eval()
+        for p in self.target.parameters():
+            p.requires_grad = False
+
+        self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
+
+        self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
+        self.transition = list()
+
+        if not os.path.exists(self.args.save_dir):
+            os.mkdir(self.args.save_dir)
+
+        self.model_path = self.args.save_dir + '/' + args.algorithm
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        self.model_path = self.model_path + '/' + args.env_name
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        if os.path.exists(self.model_path + '/DoubleDQN.pth'):
+            self.load_models()
+
+        self.total_step = 0
+
+    def choose_action(self, state, epsilon):
+        with T.no_grad():
+            if epsilon >= np.random.random() and not self.args.evaluate:
+                choose_action = np.random.randint(0, self.n_actions)
+            else :
+                choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
+                choose_action = choose_action.detach().cpu().numpy()
+
+            if not self.args.evaluate:
+                self.transition = [state, choose_action]
+        return choose_action
+
+    def learn(self):
+        with T.no_grad():
+            samples = self.memory.sample_batch(self.args.batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_q = self.target(next_state).gather(1, self.eval(next_state).argmax(dim = 1, keepdim = True))
+            target_q = reward + next_q * mask
+
+        curr_q = self.eval(state).gather(1, action)
+
+        loss = (target_q - curr_q)**2
+        loss = loss.mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
         if self.total_step % self.args.update_rate == 0:
             _target_net_update(self.eval, self.target)
 
-        return Q_loss
-
     def save_models(self):
-        _save_model(self.eval)
+        _save_model(self.eval, self.checkpoint)
 
     def load_models(self):
-        _load_model(self.eval)
+        _load_model(self.eval, self.checkpoint)
+
+class DuelingDQNAgent(object):
+    def __init__(self, args):
+
+        self.args = args
+
+        self.env = gym.make(args.env_name)
+        self.n_states = self.env.observation_space.shape[0]
+        self.n_actions = self.env.action_space.n
+
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'DuelingDQN.pth')
+
+        self.eval = DuelingNetwork(self.n_states, self.n_actions, args)
+
+        self.target = copy.deepcopy(self.eval)
+        self.target.eval()
+        for p in self.target.parameters():
+            p.requires_grad = False
+
+        self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
+
+        self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
+        self.transition = list()
+
+        if not os.path.exists(self.args.save_dir):
+            os.mkdir(self.args.save_dir)
+
+        self.model_path = self.args.save_dir + '/' + args.algorithm
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        self.model_path = self.model_path + '/' + args.env_name
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        if os.path.exists(self.model_path + '/DuelingDQN.pth'):
+            self.load_models()
+
+        self.total_step = 0
+
+    def choose_action(self, state, epsilon):
+        with T.no_grad():
+            if epsilon >= np.random.random() and not self.args.evaluate:
+                choose_action = np.random.randint(0, self.n_actions)
+            else :
+                choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
+                choose_action = choose_action.detach().cpu().numpy()
+
+            if not self.args.evaluate:
+                self.transition = [state, choose_action]
+        return choose_action
+
+    def learn(self):
+        with T.no_grad():
+            samples = self.memory.sample_batch(self.args.batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
+            target_q = reward + next_q * mask
+
+        curr_q = self.eval(state).gather(1, action)
+
+        loss = (target_q - curr_q)**2
+        loss = loss.mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        if self.total_step % self.args.update_rate == 0:
+            _target_net_update(self.eval, self.target)
+
+    def save_models(self):
+        _save_model(self.eval, self.checkpoint)
+
+    def load_models(self):
+        _load_model(self.eval, self.checkpoint)
+
+class D3QNAgent(object):
+    def __init__(self, args):
+
+        self.args = args
+
+        self.env = gym.make(args.env_name)
+        self.n_states = self.env.observation_space.shape[0]
+        self.n_actions = self.env.action_space.n
+
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'D3QN.pth')
+
+        self.eval = DuelingNetwork(self.n_states, self.n_actions, args)
+
+        self.target = copy.deepcopy(self.eval)
+        self.target.eval()
+        for p in self.target.parameters():
+            p.requires_grad = False
+
+        self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
+
+        self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
+        self.transition = list()
+
+        if not os.path.exists(self.args.save_dir):
+            os.mkdir(self.args.save_dir)
+
+        self.model_path = self.args.save_dir + '/' + args.algorithm
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        self.model_path = self.model_path + '/' + args.env_name
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        if os.path.exists(self.model_path + '/D3QN.pth'):
+            self.load_models()
+
+        self.total_step = 0
+
+    def choose_action(self, state, epsilon):
+        with T.no_grad():
+            if epsilon >= np.random.random() and not self.args.evaluate:
+                choose_action = np.random.randint(0, self.n_actions)
+            else :
+                choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
+                choose_action = choose_action.detach().cpu().numpy()
+
+            if not self.args.evaluate:
+                self.transition = [state, choose_action]
+        return choose_action
+
+    def learn(self):
+        with T.no_grad():
+            samples = self.memory.sample_batch(self.args.batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_q = self.target(next_state).gather(1, self.eval(next_state).argmax(dim = 1, keepdim = True))
+            target_q = reward + next_q * mask
+
+        curr_q = self.eval(state).gather(1, action)
+
+        loss = (target_q - curr_q)**2
+        loss = loss.mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        if self.total_step % self.args.update_rate == 0:
+            _target_net_update(self.eval, self.target)
+
+
+    def save_models(self):
+        _save_model(self.eval, self.checkpoint)
+
+    def load_models(self):
+        _load_model(self.eval, self.checkpoint)
+
+class NoisyDQNAgent(object):
+    def __init__(self, args):
+
+        self.args = args
+
+        self.env = gym.make(args.env_name)
+        self.n_states = self.env.observation_space.shape[0]
+        self.n_actions = self.env.action_space.n
+
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'NoisyDQN.pth')
+
+        self.eval = QNetwork(self.n_states, self.n_actions, args)
+
+        self.target = copy.deepcopy(self.eval)
+        self.target.eval()
+        for p in self.target.parameters():
+            p.requires_grad = False
+
+        self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
+
+        self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
+        self.transition = list()
+
+        if not os.path.exists(self.args.save_dir):
+            os.mkdir(self.args.save_dir)
+
+        self.model_path = self.args.save_dir + '/' + args.algorithm
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        self.model_path = self.model_path + '/' + args.env_name
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        if os.path.exists(self.model_path + '/NoisyDQN.pth'):
+            self.load_models()
+
+        self.total_step = 0
+
+    def choose_action(self, state):
+        with T.no_grad():
+            choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
+            choose_action = choose_action.detach().cpu().numpy()
+            if not self.args.evaluate:
+                self.transition = [state, choose_action]
+        return choose_action
+
+    def learn(self):
+        with T.no_grad():
+            samples = self.memory.sample_batch(self.args.batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
+            target_q = reward + next_q * mask
+
+        curr_q = self.eval(state).gather(1, action)
+
+        loss = (target_q - curr_q)**2
+        loss = loss.mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        self.eval.reset_noise()
+        self.target.reset_noise()
+
+        if self.total_step % self.args.update_rate == 0:
+            _target_net_update(self.eval, self.target)
+
+    def save_models(self):
+        _save_model(self.eval, self.checkpoint)
+
+    def load_models(self):
+        _load_model(self.eval, self.checkpoint)

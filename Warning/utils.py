@@ -1,4 +1,5 @@
 import torch as T
+import torch.nn as nn
 import numpy as np
 import random
 from moviepy.editor import ImageSequenceClip
@@ -143,16 +144,28 @@ def _evaluate_agent(env, agent, args, n_starts=10):
     return reward_sum / n_starts
 
 
-def _save_model(net):
+def _save_model(net, dirpath):
     print('------ Save model ------')
-    T.save(net.state_dict(), net.checkpoint)
+    T.save(net.state_dict(), dirpath)
 
 
-def _load_model(net):
+def _load_model(net, dirpath):
     print('------ load model ------')
-    net.load_state_dict(T.load(net.checkpoint))
+    net.load_state_dict(T.load(dirpath))
 
 def _read_yaml(params):
     with open(params, encoding='utf-8') as f:
         config = yaml.load(f.read(), Loader=yaml.FullLoader)
     return config
+
+# network layers parameters resetting
+def reset_parameters(Sequential, std=1.0, bias_const=1e-6):
+    for layer in Sequential:
+        if isinstance(layer, nn.Linear):
+            nn.init.orthogonal_(layer.weight, std)
+            nn.init.constant_(layer.bias, bias_const)
+
+def reset_single_layer_parameters(layer, std=1.0, bias_const=1e-6):
+        if isinstance(layer, nn.Linear):
+            nn.init.orthogonal_(layer.weight, std)
+            nn.init.constant_(layer.bias, bias_const)
