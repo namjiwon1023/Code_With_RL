@@ -27,6 +27,24 @@ def get_args():
         if args.algorithm == 'Noisy_DQN':
             params = './Hyperparameter/noisydqn.yaml'
 
+        if args.algorithm == 'DDPG':
+            params = './Hyperparameter/ddpg.yaml'
+
+        if args.algorithm == 'TD3':
+            params = './Hyperparameter/td3.yaml'
+
+        if args.algorithm == 'SAC':
+            params = './Hyperparameter/sac.yaml'
+
+        if args.algorithm == 'PPO':
+            params = './Hyperparameter/ppo.yaml'
+
+        if args.algorithm == 'A2C':
+            params = './Hyperparameter/a2c.yaml'
+
+        if args.algorithm == 'BC_SAC':
+            params = './Hyperparameter/behaviorcloning.yaml'
+
         cfg = _read_yaml(params)
         args.__dict__ = cfg
 
@@ -61,6 +79,24 @@ def get_args():
 
         if args.algorithm == 'Noisy_DQN':
             params = './Hyperparameter/noisydqn.yaml'
+
+        if args.algorithm == 'DDPG':
+            params = './Hyperparameter/ddpg.yaml'
+
+        if args.algorithm == 'TD3':
+            params = './Hyperparameter/td3.yaml'
+
+        if args.algorithm == 'SAC':
+            params = './Hyperparameter/sac.yaml'
+
+        if args.algorithm == 'PPO':
+            params = './Hyperparameter/ppo.yaml'
+
+        if args.algorithm == 'A2C':
+            params = './Hyperparameter/a2c.yaml'
+
+        if args.algorithm == 'BC_SAC':
+            params = './Hyperparameter/behaviorcloning.yaml'
 
         cfg = _read_yaml(params)
         args.__dict__ = cfg

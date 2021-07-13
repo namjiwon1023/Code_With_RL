@@ -1,14 +1,8 @@
-import torch as T
-import torch.nn as nn
-import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
-import numpy as np
-import os
-import random
-from tqdm import tqdm
-import time
 
 from agent import DQNAgent, DoubleDQNAgent, DuelingDQNAgent, D3QNAgent, NoisyDQNAgent
+from agent import DDPGAgent, TD3Agent, SACAgent, PPOAgent, A2CAgent, BC_SACAgent
+
 from utils import _random_seed
 from arguments import get_args
 from runner import Runner
@@ -32,6 +26,24 @@ if __name__ == '__main__':
 
     if args.algorithm == 'Noisy_DQN':
         agent = NoisyDQNAgent(args)
+
+    if args.algorithm == 'DDPG':
+        agent = DDPGAgent(args)
+
+    if args.algorithm == 'TD3':
+        agent = TD3Agent(args)
+
+    if args.algorithm == 'SAC':
+        agent = SACAgent(args)
+
+    if args.algorithm == 'PPO':
+        agent = PPOAgent(args)
+
+    if args.algorithm == 'A2C':
+        agent = A2CAgent(args)
+
+    if args.algorithm == 'BC_SAC':
+        agent = BC_SACAgent(args)
 
     runner = Runner(agent, args, agent.env, writer)
 

@@ -72,3 +72,21 @@ class ReplayBuffer:
     def ready(self, batch_size):
         if self.cur_len >= batch_size:
             return True
+
+
+class ReplayBufferPPO:
+    def __init__(self):
+        self.states = []
+        self.actions = []
+        self.rewards = []
+        self.values = []
+        self.masks = []
+        self.log_probs = []
+
+    def RB_clear(self):
+        del self.states[:]
+        del self.actions[:]
+        del self.rewards[:]
+        del self.values[:]
+        del self.masks[:]
+        del self.log_probs[:]

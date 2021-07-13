@@ -1,15 +1,5 @@
-import torch as T
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-import os
-import random
-from tqdm import tqdm
-import time
-
 from utils import _make_gif, _evaluate_agent, _save_model
-
 
 class Runner:
     def __init__(self, agent, args, env, writer):

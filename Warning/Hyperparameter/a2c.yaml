@@ -1,0 +1,16 @@
+# Advantage Actor-Critic
+# You can modify the hyperparameters here
+
+algorithm: 'A2C'
+actor_lr: 0.0001      # Actor Network learning rate
+critic_lr: 0.001      # Critic Network learning rate
+
+entropy_weight: 0.01
+
+gamma: 0.9           # discount factor
+hidden_size: 128      # hidden layer units
+
+use_epsilon: False
+is_discrete: False
+
+use_noisy_layer: False

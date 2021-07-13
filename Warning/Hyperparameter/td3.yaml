@@ -1,0 +1,26 @@
+# Twin Delayed Deep Deterministic Policy Gradients
+# You can modify the hyperparameters here
+
+algorithm: 'TD3'
+actor_lr: 0.0003      # Actor Network learning rate
+critic_lr: 0.001      # Critic Network learning rate
+gamma: 0.99           # discount factor
+tau: 0.005             # parameter for updating the target network(soft update)
+hidden_size: 128      # hidden layer units
+policy_freq: 2        # Actor delay update rate
+buffer_size: 100000    # number of transitions can be stored in buffer
+batch_size: 128        # number of episodes to optimize at the same time
+
+# explore
+epsilon: 1.0          # Probability of performing a random action
+min_epsilon: 0.1      # Probability of performing a random action
+epsilon_decay: 0.0001 # attenuation rate
+
+noise_clip: 0.5
+exploration_noise: 0.1
+policy_noise: 0.2
+
+use_epsilon: True
+is_discrete: False
+
+use_noisy_layer: False

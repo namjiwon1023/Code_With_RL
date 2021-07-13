@@ -1,5 +1,6 @@
 import torch as T
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import random
 from moviepy.editor import ImageSequenceClip
@@ -7,13 +8,14 @@ import os
 from collections import deque
 import matplotlib.pyplot as plt
 import yaml
+import copy
 
 # target network hard update
 def _target_net_update(eval_net, target_net):
     target_net.load_state_dict(eval_net.state_dict())
 
 # target network soft update
-def _target_soft_update(target_net, eval_net, args, tau=None):
+def _target_soft_update(eval_net, target_net , args, tau=None):
     if tau == None:
         tau = args.tau
     with T.no_grad():
@@ -53,7 +55,6 @@ def _random_seed(seed):
     random.seed(seed)
     print('Using GPU : ', T.cuda.is_available() , ' |  Seed : ', seed)
 
-
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
     gif_name = '_'.join([envname])
@@ -81,8 +82,6 @@ def _make_gif(policy, env, args, maxsteps=1000):
         os.makedirs('gifs' + '/' + args.algorithm)
     clip.write_gif('gifs' + '/'  + args.algorithm + '/{}.gif'.format(gif_name), fps=30)
 
-
-
 def _make_gif_for_train(policy, env, args, step_count, maxsteps=1000):
     envname = env.spec.id
     gif_name = '_'.join([envname, str(step_count)])
@@ -106,7 +105,6 @@ def _make_gif_for_train(policy, env, args, step_count, maxsteps=1000):
     if not os.path.isdir('gifs' + '/' + args.algorithm):
         os.makedirs('gifs' + '/' + args.algorithm)
     clip.write_gif('gifs' + '/'  + args.algorithm + '/{}.gif'.format(gif_name), fps=30)
-
 
 # total reward and average reward
 def _plot(scores):
@@ -143,11 +141,9 @@ def _evaluate_agent(env, agent, args, n_starts=10):
             state = next_state
     return reward_sum / n_starts
 
-
 def _save_model(net, dirpath):
     print('------ Save model ------')
     T.save(net.state_dict(), dirpath)
-
 
 def _load_model(net, dirpath):
     print('------ load model ------')
@@ -169,3 +165,44 @@ def reset_single_layer_parameters(layer, std=1.0, bias_const=1e-6):
         if isinstance(layer, nn.Linear):
             nn.init.orthogonal_(layer.weight, std)
             nn.init.constant_(layer.bias, bias_const)
+
+def mse_loss(input, target):
+    assert len(input) == len(target)
+    return ((input - target)**2).sum()/len(input)
+
+def huber_loss(input, target):
+    return F.smooth_l1_loss(input, target)
+
+class OUNoise:
+    """Ornstein-Uhlenbeck process.
+    Taken from Udacity deep-reinforcement-learning github repository:
+    https://github.com/udacity/deep-reinforcement-learning/blob/master/
+    ddpg-pendulum/ddpg_agent.py
+    """
+
+    def __init__(
+        self,
+        size: int,
+        mu: float = 0.0,
+        theta: float = 0.15,
+        sigma: float = 0.2,
+    ):
+        """Initialize parameters and noise process."""
+        self.state = np.float64(0.0)
+        self.mu = mu * np.ones(size)
+        self.theta = theta
+        self.sigma = sigma
+        self.reset()
+
+    def reset(self):
+        """Reset the internal state (= noise) to mean (mu)."""
+        self.state = copy.copy(self.mu)
+
+    def sample(self) -> np.ndarray:
+        """Update internal state and return it as a noise sample."""
+        x = self.state
+        dx = self.theta * (self.mu - x) + self.sigma * np.array(
+            [random.random() for _ in range(len(x))]
+        )
+        self.state = x + dx
+        return self.state
