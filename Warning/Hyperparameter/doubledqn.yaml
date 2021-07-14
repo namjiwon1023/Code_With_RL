@@ -18,3 +18,4 @@ epsilon_decay: 0.0005 # attenuation rate
 use_epsilon: True
 is_discrete: True
 use_noisy_layer: False
+is_off_policy: True

@@ -14,3 +14,4 @@ use_noisy_layer: True
 
 use_epsilon: False
 is_discrete: True
+is_off_policy: True

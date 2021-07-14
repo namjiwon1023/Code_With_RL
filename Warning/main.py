@@ -52,4 +52,7 @@ if __name__ == '__main__':
         print('Average returns is', returns)
         runner.gif(agent, agent.env)
     else:
-        runner.run()
+        if args.algorithm == 'PPO':
+            runner.ppo_run()
+        else:
+            runner.run()
