@@ -1,59 +1,10 @@
-import torch as T
-import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 import random
 from moviepy.editor import ImageSequenceClip
 import os
-from collections import deque
 import matplotlib.pyplot as plt
 import yaml
 import copy
-
-# target network hard update
-def _target_net_update(eval_net, target_net):
-    target_net.load_state_dict(eval_net.state_dict())
-
-# target network soft update
-def _target_soft_update(eval_net, target_net , args, tau=None):
-    if tau == None:
-        tau = args.tau
-    with T.no_grad():
-        for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
-            t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
-
-# generalized advantage estimator
-def compute_gae(next_value, rewards, masks, values, gamma = 0.99, tau = 0.95,):
-    values = values + [next_value]
-    gae = 0
-    returns = deque()
-
-    for step in reversed(range(len(rewards))):
-        delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
-        gae = delta + gamma * tau * masks[step] * gae
-        returns.appendleft(gae + values[step])
-
-    return list(returns)
-
-# Proximal Policy Optimization
-def ppo_iter(epoch, mini_batch_size, states, actions, values, log_probs, returns, advantages,):
-    batch_size = states.size(0)
-    for _ in range(epoch):
-        for _ in range(batch_size // mini_batch_size):
-            rand_ids = np.random.choice(batch_size, mini_batch_size)
-            yield states[rand_ids, :], actions[rand_ids, :], values[rand_ids, :], log_probs[rand_ids, :], returns[rand_ids, :], advantages[rand_ids, :]
-
-# Random Seed Settings
-def _random_seed(seed):
-    if T.backends.cudnn.enabled:
-        T.backends.cudnn.benchmark = False
-        T.backends.cudnn.deterministic = True
-
-    T.manual_seed(seed)
-    T.cuda.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    print('Using GPU : ', T.cuda.is_available() , ' |  Seed : ', seed)
 
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
@@ -164,37 +115,10 @@ def _store_expert_data(env, agent, args, n_starts=1000):
             state = next_state
     return None
 
-def _save_model(net, dirpath):
-    print('------ Save model ------')
-    T.save(net.state_dict(), dirpath)
-
-def _load_model(net, dirpath):
-    print('------ load model ------')
-    net.load_state_dict(T.load(dirpath))
-
 def _read_yaml(params):
     with open(params, encoding='utf-8') as f:
         config = yaml.load(f.read(), Loader=yaml.FullLoader)
     return config
-
-# network layers parameters resetting
-def reset_parameters(Sequential, std=1.0, bias_const=1e-6):
-    for layer in Sequential:
-        if isinstance(layer, nn.Linear):
-            nn.init.orthogonal_(layer.weight, std)
-            nn.init.constant_(layer.bias, bias_const)
-
-def reset_single_layer_parameters(layer, std=1.0, bias_const=1e-6):
-        if isinstance(layer, nn.Linear):
-            nn.init.orthogonal_(layer.weight, std)
-            nn.init.constant_(layer.bias, bias_const)
-
-def mse_loss(input, target):
-    assert len(input) == len(target)
-    return ((input - target)**2).sum()/len(input)
-
-def huber_loss(input, target):
-    return F.smooth_l1_loss(input, target)
 
 class OUNoise:
     """Ornstein-Uhlenbeck process.

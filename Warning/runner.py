@@ -1,5 +1,5 @@
 import numpy as np
-from utils import _make_gif, _evaluate_agent, _save_model, _store_expert_data
+from utils import _make_gif, _evaluate_agent, _store_expert_data
 
 class Runner:
     def __init__(self, agent, args, env, writer):
@@ -93,7 +93,7 @@ class Runner:
                 print('Reach the maximum number of training steps ！')
                 break
 
-            if self.args.is_off_policy:
+            if self.args.is_discrete:
                 if avg_score == 200:            # early stopping
                     print('Stop Training')
                     break

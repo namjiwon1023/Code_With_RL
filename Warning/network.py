@@ -6,7 +6,6 @@ import numpy
 import math
 from torch.distributions import Normal, Categorical
 import random
-from utils import reset_parameters, reset_single_layer_parameters
 
 class QNetwork(nn.Module):
     def __init__(self, n_states, n_actions, args):
@@ -75,6 +74,7 @@ class DuelingNetwork(nn.Module):
         advantage = self.advantage(feature)
         value = self.value(feature)
 
+        # Here we calculate advantage Q(s,a) = A(s,a) + V(s)
         out = value + advantage - advantage.mean(dim=-1, keepdim=True)
 
         return out
@@ -125,7 +125,6 @@ class Actor(nn.Module): # Deterministic Policy Gradient(DPG), Deep Deterministic
         super(Actor, self).__init__()
         self.device = args.device
         self.max_action = max_action
-        # self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'ddpg_actor.pth')
 
         self.pi = nn.Sequential(nn.Linear(n_states, args.hidden_size),
                                     nn.ReLU(),
@@ -148,8 +147,6 @@ class ActorA2C(nn.Module): # Advantage Actor-Critic
         super(ActorA2C, self).__init__()
         self.args = args
         self.device = args.device
-
-        # self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'a2c_actor.pth')
 
         self.feature = nn.Sequential(nn.Linear(n_states, args.hidden_size),
                                 nn.ReLU(),
@@ -179,7 +176,6 @@ class ActorPPO(nn.Module): # Proximal Policy Optimization
         super(ActorPPO, self).__init__()
         self.args = args
         self.device = args.device
-        # self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'ppo_actor.pth')
 
         self.mu = nn.Sequential(nn.Linear(n_states, args.hidden_size),
                                 nn.ReLU(),
@@ -210,7 +206,6 @@ class ActorSAC(nn.Module): # Soft Actor-Critic
         self.min_log_std = args.min_log_std
         self.max_log_std = args.max_log_std
         self.max_action = max_action
-        # self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'SAC_actor.pth')
 
         self.feature = nn.Sequential(nn.Linear(n_states, args.hidden_size),
                                     nn.ReLU(),
@@ -256,7 +251,6 @@ class CriticQ(nn.Module): # Action Value Function
     def __init__(self, n_states, n_actions, args):
         super(CriticQ, self).__init__()
         self.device = args.device
-        # self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'DDPG_critic.pth')
 
         self.Value = nn.Sequential(nn.Linear(n_states + n_actions, args.hidden_size),
                                     nn.ReLU(),
@@ -278,7 +272,6 @@ class CriticV(nn.Module): # State Value Function
     def __init__(self, n_states, args):
         super(CriticV, self).__init__()
         self.device = args.device
-        # self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'a2c_critic.pth')
 
         self.Value = nn.Sequential(nn.Linear(n_states, args.hidden_size),
                                     nn.ReLU(),
@@ -299,7 +292,6 @@ class CriticTwin(nn.Module): # Twin Delayed Deep Deterministic Policy Gradients(
     def __init__(self, n_states, n_actions, args):
         super(CriticTwin, self).__init__()
         self.device = args.device
-        # self.checkpoint = os.path.join(args.save_dir + '/' + args.env_name, 'TD3_critic.pth')
 
         self.Value1 = nn.Sequential(nn.Linear(n_states + n_actions, args.hidden_size),
                                     nn.ReLU(),
@@ -330,3 +322,14 @@ class CriticTwin(nn.Module): # Twin Delayed Deep Deterministic Policy Gradients(
         Q1 = self.Value1(cat)
         Q2 = self.Value2(cat)
         return Q1, Q2
+
+def reset_parameters(Sequential, std=1.0, bias_const=1e-6):
+    for layer in Sequential:
+        if isinstance(layer, nn.Linear):
+            nn.init.orthogonal_(layer.weight, std)
+            nn.init.constant_(layer.bias, bias_const)
+
+def reset_single_layer_parameters(layer, std=1.0, bias_const=1e-6):
+        if isinstance(layer, nn.Linear):
+            nn.init.orthogonal_(layer.weight, std)
+            nn.init.constant_(layer.bias, bias_const)
