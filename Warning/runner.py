@@ -1,5 +1,5 @@
 import numpy as np
-from utils import _make_gif, _evaluate_agent, _save_model
+from utils import _make_gif, _evaluate_agent, _save_model, _store_expert_data
 
 class Runner:
     def __init__(self, agent, args, env, writer):
@@ -85,7 +85,10 @@ class Runner:
 
 
     def evaluate(self):
-        returns = _evaluate_agent(self.env, self.agent, self.args, n_starts=1)
+        if not self.args.is_store_transition:
+            returns = _evaluate_agent(self.env, self.agent, self.args, n_starts=1)
+        else:
+            returns = _store_expert_data(self.env, self.agent, self.args, n_starts=1000)
         return returns
 
     def gif(self, policy, env, maxsteps=1000):

@@ -141,6 +141,29 @@ def _evaluate_agent(env, agent, args, n_starts=10):
             state = next_state
     return reward_sum / n_starts
 
+def _store_expert_data(env, agent, args, n_starts=1000):
+    episode_limit = env.spec.max_episode_steps
+    transition = []
+    for _ in range(n_starts):
+        cur_episode_steps = 0
+        done = False
+        state = env.reset()
+        while (not done):
+            if args.evaluate:
+                env.render()
+            cur_episode_steps += 1
+            if args.use_epsilon:
+                action = agent.choose_action(state, 0)
+            else:
+                action = agent.choose_action(state)
+            next_state, reward, done, _ = env.step(action)
+            real_done = False if cur_episode_steps >= episode_limit else done
+            mask = 0.0 if real_done else args.gamma
+            transition = [state, action, reward, next_state, mask]
+            agent.memory.store_transition(transition)
+            state = next_state
+    return None
+
 def _save_model(net, dirpath):
     print('------ Save model ------')
     T.save(net.state_dict(), dirpath)

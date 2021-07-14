@@ -57,8 +57,9 @@ def get_args():
         args.save_rate = 2000               # store rate
         args.model_dir = ""                 # Where to store the trained model
         args.evaluate_episodes = 10         # Parameters for Model Prediction
-        args.evaluate = True               # Parameters for Model Prediction
+        args.evaluate = True                # Parameters for Model Prediction
         args.evaluate_rate = 1000           # Parameters for Model Prediction
+        args.is_store_transition = False    # Store expert data
 
         if args.is_discrete:
             args.env_name = 'CartPole-v0'
@@ -112,6 +113,7 @@ def get_args():
         args.evaluate_episodes = 10         # Parameters for Model Prediction
         args.evaluate = False               # Parameters for Model Prediction
         args.evaluate_rate = 1000           # Parameters for Model Prediction
+        args.is_store_transition = False    # Store expert data
 
         if args.is_discrete:
             args.env_name = 'CartPole-v0'
