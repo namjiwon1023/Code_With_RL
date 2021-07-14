@@ -1,5 +1,6 @@
 import numpy as np
 from utils import _make_gif, _evaluate_agent, _store_expert_data
+import torch as T
 
 class Runner:
     def __init__(self, agent, args, env, writer):
@@ -129,25 +130,27 @@ class Runner:
                 action = self.agent.choose_action(state)
                 next_state, reward, done, _ = self.env.step(action)
                 real_done = False if cur_episode_steps >= self.episode_limit else done
+
                 if not self.args.evaluate:
                     self.agent.memory.rewards.append(T.as_tensor((reward,), dtype=T.float32, device=self.args.device))
                     self.agent.memory.masks.append(T.as_tensor((1. - float(real_done)), dtype=T.float32, device=self.args.device))
-                state = next_state
-                score += reward
 
                 if steps % self.args.update_step == 0:
                     self.agent.learn(next_state)
                     steps = 0
                     n_updates += 1
 
-                if self.agent.total_step % self.args.evaluate_rate == 0 and n_updates > 0:
-                    running_reward = np.mean(scores[-10:])
-                    eval_reward = self.agent.evaluate_agent(n_starts=self.args.evaluate_episodes)
-                    eval_rewards.append(eval_reward)
-                    self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
-                    self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)
-                    print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, round(score, 2), round(eval_reward, 2), round(avg_score, 2)))
-                    scores = []
+                state = next_state
+                score += reward
+
+                # if self.agent.total_step % self.args.evaluate_rate == 0 and n_updates > 0:
+                #     running_reward = np.mean(scores[-10:])
+                #     eval_reward = _evaluate_agent(self.env, self.agent, self.args, n_starts=self.args.evaluate_episodes)
+                #     eval_rewards.append(eval_reward)
+                #     self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
+                #     self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)
+                #     print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, round(score, 2), round(eval_reward, 2), round(avg_score, 2)))
+                #     scores = []
                 if done:
                     break
 

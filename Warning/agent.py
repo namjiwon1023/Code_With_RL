@@ -1,12 +1,14 @@
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
+from torch.distributions import Normal, Categorical
 import numpy as np
 import os
 import copy
 import gym
 from gym.wrappers import RescaleAction
 
+from collections import deque
 from network import QNetwork, DuelingNetwork
 from network import Actor, ActorA2C, ActorPPO, ActorSAC, CriticQ, CriticV, CriticTwin
 from replaybuffer import ReplayBuffer, ReplayBufferPPO
@@ -759,8 +761,8 @@ class TD3Agent(object):
             self.actor_optimizer.step()
 
             # target network soft update
-            _target_soft_update(self.actor_target, self.actor_eval, self.args)
-            _target_soft_update(self.critic_target, self.critic_eval, self.args)
+            self._target_soft_update(self.actor_target, self.actor_eval, self.args.tau)
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
 
         for p in self.critic_eval.parameters():
             p.requires_grad = True
@@ -907,7 +909,7 @@ class SACAgent(object):
 
         # target network soft update
         if self.total_step % self.args.target_update_interval == 0:
-            _target_soft_update(self.critic_target, self.critic_eval, self.args)
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
 
     def save_models(self):
         print('------ Save model ------')
@@ -1093,8 +1095,8 @@ class A2CAgent(object):
         self.transition = list()
 
         # actor-critic net setting
-        self.actor = ActorNetwork(self.n_states, self.n_actions, self.args)
-        self.critic = CriticNetwork(self.n_states, self.args)
+        self.actor = ActorA2C(self.n_states, self.n_actions, self.args)
+        self.critic = CriticV(self.n_states, self.args)
 
         # Loss Function
         self.criterion = nn.SmoothL1Loss()
@@ -1133,7 +1135,7 @@ class A2CAgent(object):
         return choose_action.clamp(self.low_action, self.max_action).detach().cpu().numpy()
 
     def learn(self):
-        state, log_prob, next_state, reward, mask = self.transition
+        state, log_prob, reward, next_state, mask = self.transition
 
         # Q(s,a)   = r + gamma * V(s`)  if state != Terminal
         #       = r                       otherwise
@@ -1323,7 +1325,7 @@ class BC_SACAgent(object):
 
         # target network soft update
         if self.total_step % self.args.target_update_interval == 0:
-            _target_soft_update(self.critic_target, self.critic_eval, self.args)
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
 
     def save_models(self):
         print('------ Save model ------')

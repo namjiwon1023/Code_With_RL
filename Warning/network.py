@@ -218,7 +218,7 @@ class ActorSAC(nn.Module): # Soft Actor-Critic
 
         reset_parameters(self.feature)
         reset_single_layer_parameters(self.log_std)
-        singlereset_single_layer_parameters_layer_reset_parameters(self.mu)
+        reset_single_layer_parameters(self.mu)
 
         self.to(self.device)
 
