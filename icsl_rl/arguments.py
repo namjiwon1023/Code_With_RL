@@ -1,7 +1,7 @@
 import yaml
 import argparse
 import torch as T
-from utils import _read_yaml
+from icsl_rl.utils import _read_yaml
 
 device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 

@@ -2,10 +2,15 @@ import torch as T
 import random
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
-from agent import DQNAgent, DoubleDQNAgent, DuelingDQNAgent, D3QNAgent, NoisyDQNAgent
-from agent import DDPGAgent, TD3Agent, SACAgent, PPOAgent, A2CAgent, BC_SACAgent
-from arguments import get_args
-from runner import Runner
+
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
+from icsl_rl.agent import DQNAgent, DoubleDQNAgent, DuelingDQNAgent, D3QNAgent, NoisyDQNAgent
+from icsl_rl.agent import DDPGAgent, TD3Agent, SACAgent, PPOAgent, A2CAgent, BC_SACAgent
+from icsl_rl.arguments import get_args
+from icsl_rl.runner import Runner
 
 # Random Seed Settings
 def _random_seed(seed):

@@ -1,5 +1,5 @@
 import numpy as np
-from utils import _make_gif, _evaluate_agent, _store_expert_data
+from icsl_rl.utils import _make_gif, _evaluate_agent, _store_expert_data
 import torch as T
 
 class Runner:
