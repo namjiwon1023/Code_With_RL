@@ -124,7 +124,7 @@ PPO에서는 policy와 value function의 parameter sharing이 되는 구조의 n
 
 이를 위해 loss function이 policy surrogate와 value function error와 관련된 term을 결합되어 설계된다.
 
-<img src="../img/ppo11.png"/>
+<img src="../assets/ppo11.png"/>
 
 c1과 c2는 각각 loss의 비중을 결정하는 계수, L_VF는 value function의 squared-error loss, S는 entropy bous이다.
 
@@ -144,17 +144,17 @@ c1과 c2는 각각 loss의 비중을 결정하는 계수, L_VF는 value function
 
 length-T만큼의 trajectory segment를 sample로서 하나의 미니배치로 사용하는 것이다.
 
-<img src="../img/ppo12.png"/>
+<img src="../assets/ppo12.png"/>
 
 이 개념에 generalizaing을 더하면 truncated version of generialized advantage estimator로 재탄생 하게 된다.
 
-<img src="../img/ppo13.png"/>
+<img src="../assets/ppo13.png"/>
 
 PPO는 아래와 같이, 매 iteration마다 N(parallel) actor가 T timestep만큼의 데이터를 모아 업데이트 하는 방식이다.
 
 즉 NT 개의 데이터를 이용해 surrogate loss를 형성하고, minibatch SGD를 적용해 이를 업데이트한다. K epoch에 걸쳐 이를 반복한다.
 
-<img src="../img/ppo10.png"/>
+<img src="../assets/ppo10.png"/>
 
 </br>
 

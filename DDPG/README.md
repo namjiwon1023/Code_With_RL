@@ -64,22 +64,22 @@ DQN의 이전에는 large, non-linear function approximator가 어렵고 불안�
 
 #### **Notation**
 
-<p align="left"><img src="../img/img1.png"/></p>
+<p align="left"><img src="../assets/img1.png"/></p>
 
 <br/>
 
 action-value function은 많은 강화학습 알고리즘에서 사용된다. 
 
 이는 아래의 식과 같이 policy를 따라 방문하게되는 action, state에서 얻게 될 모든 return의 기댓값이다.
-<p align="left"><img src="../img/latex48.png"/></p>
+<p align="left"><img src="../assets/latex48.png"/></p>
 
 위 식은 일반적으로 **Bellman Equation**이라 알려져있는 recursive relationship 방식으로 표현되곤 한다.
 
-<p align="left"><img src="../img/latex49.png"/></p>
+<p align="left"><img src="../assets/latex49.png"/></p>
 
 만약 target policy가 deterministic하다면 action-value function 식 내부의 기댓값을 없앨 수 있으며 policy 역시 다음과 같이 표현된다.
 
-<p align="left"><img src="../img/latex50.png"/></p>
+<p align="left"><img src="../assets/latex50.png"/></p>
 
 기댓값은 오직 환경(state,reward)에만 의존적이다.
 
@@ -91,7 +91,7 @@ action-value function은 많은 강화학습 알고리즘에서 사용된다.
 
 또한 근사함수를 최적화 하기위해 아래 식을 이용해 loss를 구하고 이를 최소화 해야만 한다.
 
-<p align="left"><img src="../img/latex51.png"/></p>
+<p align="left"><img src="../assets/latex51.png"/></p>
 
 <br/>
 
@@ -125,7 +125,7 @@ DPG에서는 actor function을 파라미터화하여 관리하였고, actor의 p
 
 critic은 bellman equation을 이용한 Q-learning 방식으로 학습되었고, actor는 policy performance의 gradient 방향으로 update 되었다.
 
-<p align="left"><img src="../img/latex52.png"/></p>
+<p align="left"><img src="../assets/latex52.png"/></p>
 
 <br/>
 
@@ -143,7 +143,7 @@ Q-learning과 함께 non-linear function approximator를 사용한다는 것은 
 
 이것을 이 논문에서는 **Deep DPG(DDPG)** 라 부른다.
 
-<p align="center"><img src="../img/img2.png"/></p>
+<p align="center"><img src="../assets/img2.png"/></p>
 
 <br/>
 
@@ -187,7 +187,7 @@ neural network를 사용한 Q-learning은 다양한 실험환경에서 unstable�
 
 이들은 target value를 계산하는 데에 사용될 것이다. 또한 target network의 weight는 학습된 network를 천천히 따라서 업데이트 하는 방식이 된다.
 
-<p align="left"><img src="../img/latex53.png"/></p>
+<p align="left"><img src="../assets/latex53.png"/></p>
 
 이는 target values의 변화의 속도를 천천히 제한하여, 학습의 안정성을 높여준다.
 
@@ -227,7 +227,7 @@ DDPG와 같은 off-policy 알고리즘의 장점은 <u>학습알고리즘과 별
 
 이 논문에서는 exploration policy에 noise process를 추가한 sample을 이용하였다고 한다.
 
-<p align="left"><img src="../img/latex54.png"/></p>
+<p align="left"><img src="../assets/latex54.png"/></p>
 
 해당 논문에서 사용된 noise process는  *Ornstein-Uhlenbeck process(1930)* 이며, temporally correlated noise를 발생시킨다.
 
@@ -237,7 +237,7 @@ DDPG와 같은 off-policy 알고리즘의 장점은 <u>학습알고리즘과 별
 
 ### [Results]
 
-<p align="center"><img src="../img/img3.png"/></p>
+<p align="center"><img src="../assets/img3.png"/></p>
 
 - 위 그래프에서 **target network**가 결정적인 역할을 하고있음을 알 수 있다.
 
