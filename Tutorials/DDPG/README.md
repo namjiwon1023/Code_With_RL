@@ -6,7 +6,7 @@
 
 Timothy P. Lillicrap∗ , Jonathan J. Hunt∗ , Alexander Pritzel, Nicolas Heess, Tom Erez, Yuval Tassa, David Silver & Daan Wierstra (2016)
 
-​	[`PAPER`](https://arxiv.org/pdf/1509.02971.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/DDPG/algorithm/agent.py)
+​	[`PAPER`](https://arxiv.org/pdf/1509.02971.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/DDPG/algorithm/agent.py)
 
 <br/>
 

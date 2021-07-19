@@ -8,7 +8,7 @@
 
 Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning." Nature 518.7540 (2015): 529.
 
-​	[`PAPER`](https://arxiv.org/pdf/1312.5602.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/DQN/agent.py)
+​	[`PAPER`](https://arxiv.org/pdf/1312.5602.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/DQN/agent.py)
 
 <br/>
 
