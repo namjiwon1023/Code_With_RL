@@ -35,3 +35,4 @@ NoisyNet 은 네트워크의 weight 에 perturbation 을 주어 exploration 을 
 ### [Trained Results]
 
 ![example](./gifs/CartPole-v0.gif)
+<img src="../assets/Result/noisydqn_reward.jpg"/>

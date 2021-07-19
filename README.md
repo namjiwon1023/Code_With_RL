@@ -49,43 +49,98 @@
 - [ ] QMIX
 
 
+## Installation
+- Clone the repo and cd into it:
+    ```bash
+    git clone https://github.com/namjiwon1023/Code_With_RL
+    cd Code_With_RL
+    ```
+- If you don't have Pytorch installed already, install your favourite flavor of Pytorch. In most cases, you may use
+    ```bash
+    pip3 install torch torchvision torchaudio -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html # pytorch 1.8.1 LTS CUDA 10.2 version. if you have GPU.
+    ```
+    or
+    ```bash
+    pip3 install torch==1.8.1+cpu torchvision==0.9.1+cpu torchaudio==0.8.1 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html # pytorch 1.8.1 LTS CPU version. if you don`t have GPU.
+    ```
+    to install Pytorch GPU or CPU version.
+
+## File Structure
++ **Hyperparameter** # Algorithm Hyperparameters
+  + dqn.yaml
+  + doubledqn.yaml
+  + duelingdqn.yaml
+  + d3qn.yaml
+  + noisydqn.yaml
+  + ddpg.yaml
+  + td3.yaml
+  + sac.yaml
+  + ppo.yaml
+  + a2c.yaml
+  + behaviorcloning.yaml
+  + etc.
++ **agent.py**
+  + reinforcement learning algorithm
++ **network.py**
+  + QNetwork
+  + NoisyLinear
+  + ActorNetwork
+  + CriticNetwork
++ **replaybuffer.py**
+  + Simple PPO Rollout Buffer
+  + Off-Policy Experience Replay
++ **runner.py**
+  + Training loop
+  + Evaluator
++ **main.py**
+  + Start training
+  + Start evaluation
++ **utils.py**
+  + Make gif image
+  + Drawing
+  + Basic tools
+
 ## Quick Start
 
-**Installation**:
+To **train** a new network : run `python main.py --algorithm=selection algorithm`
 
-```
-git clone https://github.com/namjiwon1023/Code_With_RL.git
-cd Code_With_RL
-```
+<br/>
 
-**Simply run**:
+To **test** a preTrained network : run `python main.py --algorithm=selection algorithm --evaluate=True`
 
-To train a new network : run `python main.py`
-To test a preTrained network : run `python main.py --evaluate=True`
+Reinforcement learning **algorithms** that can now be selected:
++ **DQN**
++ **Double_DQN**
++ **Dueling_DQN**
++ **D3QN**
++ **Noisy_DQN**
++ **DDPG**
++ **TD3**
++ **SAC**
++ **PPO**
++ **A2C**
++ **BC_SAC**
 
-for default args. Changeable args are(For detailed training hyperparameters, please view `utils/arguments.py`):
-```
---env-name: String of environment name (Default: Pendulum-v0)
---seed: Int of seed (Default: 123)
---render： Whether the training environment is visualized (Default: False)
---time-steps: number of time steps (Default: 3000000)
---episode: number of episode (Default: int(1e6))
---actor-lr: actor network learning rate (Default: 1e-4)
---critic-lr: critic network learning rate (Default: 1e-3)
---hidden-size: hidden layer units (Default: 128, According to the algorithm, according to the environment, you need to make changes by yourself)
---target_update_interval： Target network update frequency (Default: 1)
---epsilon: Random exploration probability (Default: 1.0)
---min_epsilon： Randomly explore the minimum probability (Default: 0.1)
---epsilon_decay: Attenuation rate of epsilon (Default: 0.0001)
---gamma: discount factor (Default: 0.99， According to the algorithm, according to the environment, you need to make changes by yourself)
---tau: parameter for updating the target network (Default: 5e-3， According to the algorithm, according to the environment, you need to make changes by yourself）
---buffer-size： number of transitions can be stored in buffer (Default: int(1e6)）
---batch-size: number of episodes to optimize at the same time (Default: 256， According to the algorithm, according to the environment, you need to make changes by yourself)
---save-dir: directory in which training state and model should be saved (Default: "./model")
---evaluate-episodes: number of episodes for evaluating (Default: 10)
---evaluate: whether to evaluate the model (Default: False)
---evaluate-rate: how often to evaluate model (Default: 1000)
-```
+## Training Result
+
+Value Based Algorithm Compare Result:
+
+<br/>
+
+<img src="./Tutorials/assets/Result/compare.jpg"/>
+<img src="./Tutorials/assets/Result/value_based_avg_reward_compare.jpg"/>
+<img src="./Tutorials/assets/Result/value_step_compare.jpg"/>
+
+<br/>
+
+Policy Based Algorithm Compare Result:
+
+<br/>
+
+<img src="./Tutorials/assets/Result/Policy_total_reward_compare.jpg"/>
+<img src="./Tutorials/assets/Result/Policy_based_avg_reward_compare.jpg"/>
+<img src="./Tutorials/assets/Result/policy_step_compare.jpg"/>
+
 
 ## Requirements
 
@@ -95,11 +150,9 @@ Pytorch 1.6+ : https://pytorch.org/get-started/locally/
 Numpy
 openai gym : https://github.com/openai/gym
 matplotlib
-tqdm
 tensorboard
 
 ```
-
 
 ## References
 

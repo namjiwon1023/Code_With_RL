@@ -275,3 +275,5 @@ DDPG와 같은 접근방식에는 몇가지 **한계점**이 존재한다.
 
 #### OU noise DDPG
 ![example](./gifs-OU/Pendulum-v0.gif)
+
+<img src="../assets/Result/ddpg_reward.jpg"/>

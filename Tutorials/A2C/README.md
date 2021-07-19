@@ -56,3 +56,4 @@ Critic 으로 advantage function A(s,a) 를 사용하는 advantage actor-critic 
 ### [Trained Results]
 
 ![example](./gifs/Pendulum-v0.gif)
+<img src="../assets/Result/a2c_reward.jpg"/>

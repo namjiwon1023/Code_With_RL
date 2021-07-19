@@ -33,3 +33,4 @@ Double DQN 은 이 아이디어를 그대로 가져온다. DQN 에서는 freeze 
 ### [Trained Results]
 
 ![example](./gifs/CartPole-v0.gif)
+<img src="../assets/Result/ddqn_reward.jpg"/>

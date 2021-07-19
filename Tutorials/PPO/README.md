@@ -165,4 +165,4 @@ PPO는 아래와 같이, 매 iteration마다 N(parallel) actor가 T timestep만�
 ### [Trained Results]
 
 ![example](./gifs/Pendulum-v0.gif)
-![example](./gifs/ppo.jpg)
+<img src="../assets/Result/ppo_reward.jpg"/>

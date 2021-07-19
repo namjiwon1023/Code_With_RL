@@ -27,3 +27,4 @@ Q-learning 은 어떤 state s 에 대해 각 action a 의 state-action value fun
 ### [Trained Results]
 
 ![example](./gifs/CartPole-v0.gif)
+<img src="../assets/Result/duelingdqn_reward.jpg"/>
