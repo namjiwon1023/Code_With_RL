@@ -40,7 +40,7 @@ Actor-critic 에서는 return G 를 Q-network 으로 approximate 하고, bootstr
 
 Mnih, Volodymyr, et al. "Asynchronous methods for deep reinforcement learning." International conference on machine learning. PMLR, 2016.
 
-​	[`PAPER`](https://arxiv.org/pdf/1602.01783.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/A2C(Construction)/algorithm/agent.py)
+​	[`PAPER`](https://arxiv.org/pdf/1602.01783.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/A2C/algorithm/agent.py)
 
 <br/>
 
