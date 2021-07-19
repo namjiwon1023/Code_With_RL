@@ -124,11 +124,17 @@ Reinforcement learning **algorithms** that can now be selected:
 ## Training Environment
 Discrete action :
 <br/>
-<video id="video" controls="" preload="none" poster="./Tutorials/assets/CartPole_.jpg"> <source id="mp4" src="./Tutorials/assets/CartPole.mp4" type="video/mp4"> </video>
+
+<video id="video" controls="" preload="none" poster="./Tutorials/assets/CartPole_.jpg"> 
+      <source id="mp4" src="./Tutorials/assets/CartPole.mp4" type="video/mp4"> 
+</video>
 
 Continuous action :
 <br/>
-<video id="video" controls="" preload="none" poster="./Tutorials/assets/Pendulum_.jpg"> <source id="mp4" src="./Tutorials/assets/Pendulum.mp4" type="video/mp4"> </video>
+
+<video id="video" controls="" preload="none" poster="./Tutorials/assets/Pendulum_.jpg"> 
+      <source id="mp4" src="./Tutorials/assets/Pendulum.mp4" type="video/mp4"> 
+</video>
 
 
 ## Training Result
