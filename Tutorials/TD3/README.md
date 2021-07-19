@@ -367,3 +367,4 @@ TD3는 한 쌍의 critics와 하나의 actor로 구성되어있다.
 
 ![example](./gifs/Pendulum-v0.gif)
 <img src="../assets/Result/td3_reward.jpg"/>
+<img src="../assets/Result/Result_td3_step_reward.jpg"/>

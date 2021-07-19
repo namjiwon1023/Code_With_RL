@@ -34,3 +34,4 @@ Double DQN 은 이 아이디어를 그대로 가져온다. DQN 에서는 freeze 
 
 ![example](./gifs/CartPole-v0.gif)
 <img src="../assets/Result/ddqn_reward.jpg"/>
+<img src="../assets/Result/Result_ddqn_step_reward.jpg"/>

@@ -33,3 +33,4 @@ DQN 은 Q-learning 에 function approximator 로 deep learning 을 사용한 버
 
 ![example](./gifs/CartPole-v0.gif)
 <img src="../assets/Result/dqn_reward.jpg"/>
+<img src="../assets/Result/Result_dqn_step_reward.jpg"/>
