@@ -145,12 +145,12 @@ Policy Based Algorithm Compare Result:
 ## Requirements
 
 ```
-Python 3.6+
+Python 3.6+ : conda create -n icsl_rl python=3.6
 Pytorch 1.6+ : https://pytorch.org/get-started/locally/
-Numpy
+Numpy : pip install numpy
 openai gym : https://github.com/openai/gym
-matplotlib
-tensorboard
+matplotlib : pip install matplotlib
+tensorboard : pip install tensorboard
 
 ```
 
