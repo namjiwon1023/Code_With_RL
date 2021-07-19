@@ -125,12 +125,12 @@ Reinforcement learning **algorithms** that can now be selected:
 Discrete action :
 <br/>
 
-![openai GYM](./Tutorials/assets/CartPole.gif")
+![openai GYM](./Tutorials/assets/CartPole.gif)
 
 Continuous action :
 <br/>
 
-![openai GYM](./Tutorials/assets/Pendulum.gif")
+![openai GYM](./Tutorials/assets/Pendulum.gif)
 
 ## Training Result
 
