@@ -134,6 +134,11 @@ Continuous action :
 
 ![openai GYM](./Tutorials/assets/Pendulum.gif)
 
+Multi-Agent Training Environment:
+<br/>
+
+![openai MAPE](./Tutorials/assets/Predator-Prey.gif)
+
 ## Training Result
 
 Value Based Algorithm Compare Result:
