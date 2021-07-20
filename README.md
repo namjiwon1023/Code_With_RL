@@ -104,8 +104,6 @@
 
 To **train** a new network : run `python main.py --algorithm=selection algorithm`
 
-<br/>
-
 To **test** a preTrained network : run `python main.py --algorithm=selection algorithm --evaluate=True`
 
 Reinforcement learning **algorithms** that can now be selected:
@@ -121,11 +119,7 @@ Reinforcement learning **algorithms** that can now be selected:
 + **A2C**
 + **BC_SAC**
 
-<br/>
-
 Discrete action space recommendation: **Dueling DoubleQN (D3QN)**
-
-<br/>
 
 Continuous action space recommendation: use **TD3** if you are **good at tuning parameters**, use **PPO** or **SAC** if you are **not good at tuning parameters**, if the training **environment Reward function is written by beginners**, then use **PPO** .
 
