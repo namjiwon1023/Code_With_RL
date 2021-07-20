@@ -127,17 +127,17 @@ Continuous action space recommendation: use **TD3** if you are **good at tuning 
 Discrete action :
 <br/>
 
-![openai GYM](./Tutorials/assets/CartPole.gif)
+![openai GYM](./Tutorials/assets/CartPole.gif =100x100)
 
 Continuous action :
 <br/>
 
-![openai GYM](./Tutorials/assets/Pendulum.gif)
+![openai GYM](./Tutorials/assets/Pendulum.gif =100x100)
 
 Multi-Agent Training Environment:
 <br/>
 
-![openai MAPE](./Tutorials/assets/Predator-Prey.gif)
+![openai MAPE](./Tutorials/assets/Predator-Prey.gif =100x100)
 
 ## Training Result
 
