@@ -72,28 +72,13 @@ class DQNAgent(object):
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + next_q * mask
-
-        curr_q = self.eval(state).gather(1, action)
 
         # TD error
-        loss = self.criterion(curr_q, target_q)
+        critic_loss = self._value_update(self.memory, self.args.batch_size)
 
         # update value
         self.optimizer.zero_grad()
-        loss.backward()
+        critic_loss.backward()
         self.optimizer.step()
 
         # target network hard update
@@ -111,6 +96,25 @@ class DQNAgent(object):
     # target network hard update
     def _target_net_update(self, target_net, eval_net):
         target_net.load_state_dict(eval_net.state_dict())
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_q = reward + next_q * mask
+
+        current_q = self.eval(state).gather(1, action)
+        loss = self.criterion(current_q, target_q)
+
+        return loss
 
 class DoubleDQNAgent(object):
     def __init__(self, args):
@@ -170,28 +174,13 @@ class DoubleDQNAgent(object):
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_q = self.target(next_state).gather(1, self.eval(next_state).argmax(dim = 1, keepdim = True))
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + next_q * mask
-
-        curr_q = self.eval(state).gather(1, action)
 
         # TD error
-        loss = self.criterion(curr_q, target_q)
+        critic_loss = self._value_update(self.memory, self.args.batch_size)
 
         # update value
         self.optimizer.zero_grad()
-        loss.backward()
+        critic_loss.backward()
         self.optimizer.step()
 
         # target network hard update
@@ -209,6 +198,27 @@ class DoubleDQNAgent(object):
     # target network hard update
     def _target_net_update(self, target_net, eval_net):
         target_net.load_state_dict(eval_net.state_dict())
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            # Double DQN
+            next_q = self.target(next_state).gather(1, self.eval(next_state).argmax(dim = 1, keepdim = True))
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_q = reward + next_q * mask
+
+        current_q = self.eval(state).gather(1, action)
+        # TD error
+        loss = self.criterion(current_q, target_q)
+
+        return loss
 
 class DuelingDQNAgent(object):
     def __init__(self, args):
@@ -270,28 +280,12 @@ class DuelingDQNAgent(object):
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + next_q * mask
-
-        curr_q = self.eval(state).gather(1, action)
-
         # TD error
-        loss = self.criterion(curr_q, target_q)
+        critic_loss = self._value_update(self.memory, self.args.batch_size)
 
         # update value
         self.optimizer.zero_grad()
-        loss.backward()
+        critic_loss.backward()
         self.optimizer.step()
 
         # target network hard update
@@ -309,6 +303,25 @@ class DuelingDQNAgent(object):
     # target network hard update
     def _target_net_update(self, target_net, eval_net):
         target_net.load_state_dict(eval_net.state_dict())
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_q = reward + next_q * mask
+
+        current_q = self.eval(state).gather(1, action)
+        loss = self.criterion(current_q, target_q)
+
+        return loss
 
 class D3QNAgent(object):
     def __init__(self, args):
@@ -370,28 +383,12 @@ class D3QNAgent(object):
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_q = self.target(next_state).gather(1, self.eval(next_state).argmax(dim = 1, keepdim = True))
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + next_q * mask
-
-        curr_q = self.eval(state).gather(1, action)
-
         # TD error
-        loss = self.criterion(curr_q, target_q)
+        critic_loss = self._value_update(self.memory, self.args.batch_size)
 
         # update value
         self.optimizer.zero_grad()
-        loss.backward()
+        critic_loss.backward()
         self.optimizer.step()
 
         # target network hard update
@@ -410,6 +407,27 @@ class D3QNAgent(object):
     # target network hard update
     def _target_net_update(self, target_net, eval_net):
         target_net.load_state_dict(eval_net.state_dict())
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            # Double DQN
+            next_q = self.target(next_state).gather(1, self.eval(next_state).argmax(dim = 1, keepdim = True))
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_q = reward + next_q * mask
+
+        current_q = self.eval(state).gather(1, action)
+        # TD error
+        loss = self.criterion(current_q, target_q)
+
+        return loss
 
 class NoisyDQNAgent(object):
     def __init__(self, args):
@@ -467,28 +485,12 @@ class NoisyDQNAgent(object):
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + next_q * mask
-
-        curr_q = self.eval(state).gather(1, action)
-
         # TD error
-        loss = self.criterion(curr_q, target_q)
+        critic_loss = self._value_update(self.memory, self.args.batch_size)
 
         # update value
         self.optimizer.zero_grad()
-        loss.backward()
+        critic_loss.backward()
         self.optimizer.step()
 
         # noise update
@@ -510,6 +512,25 @@ class NoisyDQNAgent(object):
     # target network hard update
     def _target_net_update(self, target_net, eval_net):
         target_net.load_state_dict(eval_net.state_dict())
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_q = reward + next_q * mask
+
+        current_q = self.eval(state).gather(1, action)
+        loss = self.criterion(current_q, target_q)
+
+        return loss
 
 class DDPGAgent(object):
     def __init__(self, args):
@@ -572,63 +593,51 @@ class DDPGAgent(object):
         self.total_step = 0
 
     def choose_action(self, state, epsilon):
-        if epsilon > np.random.random() and not self.args.evaluate:
-            choose_action = np.random.uniform(self.low_action, self.max_action, self.n_actions)
-        else :
-            choose_action = self.actor_eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).detach().cpu().numpy()
+        with T.no_grad():
+            if epsilon > np.random.random() and not self.args.evaluate:
+                choose_action = np.random.uniform(self.low_action, self.max_action, self.n_actions)
+            else :
+                choose_action = self.actor_eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).detach().cpu().numpy()
 
-        if not self.args.evaluate:
-            if self.args.Gaussian_noise:
-                noise = np.random.normal(0, self.max_action*self.args.exploration_noise, size=self.n_actions)
-            else:
-                noise = self.noise.sample()
-            choose_action = np.clip(choose_action + noise, self.low_action, self.max_action)
-        self.transition = [state, choose_action]
+            if not self.args.evaluate:
+                if self.args.Gaussian_noise:
+                    noise = np.random.normal(0, self.max_action*self.args.exploration_noise, size=self.n_actions)
+                else:
+                    noise = self.noise.sample()
+                choose_action = np.clip(choose_action + noise, self.low_action, self.max_action)
+            self.transition = [state, choose_action]
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_action = self.actor_target(next_state)
-            next_value = self.critic_target(next_state, next_action)
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_values = reward + next_value * mask
-
-        eval_values = self.critic_eval(state, action)
         # TD error
-        critic_loss = self.criterion(eval_values, target_values)
+        critic_loss, state = self._value_update(self.memory, self.args.batch_size)
 
         # update value
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        # critic target network soft update
+        if self.total_step % self.args.target_update_interval == 0:
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
+
         for p in self.critic_eval.parameters():
             p.requires_grad = False
 
         # actor network loss function
-        actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean()
+        actor_loss = self._policy_update(state)
 
         # update policy
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        for p in self.critic_eval.parameters():
-            p.requires_grad = True
-
-        # target network soft update
+        # actor target network soft update
         if self.total_step % self.args.target_update_interval == 0:
             self._target_soft_update(self.actor_target, self.actor_eval, self.args.tau)
-            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
+
+        for p in self.critic_eval.parameters():
+            p.requires_grad = True
 
     def save_models(self):
         print('------ Save model ------')
@@ -647,6 +656,32 @@ class DDPGAgent(object):
         with T.no_grad():
             for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
                 t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_action = self.actor_target(next_state)
+            next_value = self.critic_target(next_state, next_action)
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_values = reward + next_value * mask
+
+        eval_values = self.critic_eval(state, action)
+        # TD error
+        critic_loss = self.criterion(eval_values, target_values)
+
+        return critic_loss, state
+
+    def _policy_update(self, state):
+        actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean()
+        return actor_loss
 
 class TD3Agent(object):
     def __init__(self, args):
@@ -706,40 +741,19 @@ class TD3Agent(object):
         self.total_step = 0
 
     def choose_action(self, state, epsilon):
-        if epsilon >= np.random.random() and not self.args.evaluate:
-            choose_action = np.random.uniform(self.low_action, self.max_action, self.n_actions)
-        else :
-            choose_action = self.actor_eval(T.as_tensor(state, device=self.actor_eval.device, dtype=T.float32)).detach().cpu().numpy()
-        if not self.args.evaluate:
-            noise = np.random.normal(0, self.max_action*self.args.exploration_noise, size=self.n_actions)
-            choose_action = np.clip(choose_action + noise, self.low_action, self.max_action)
-        self.transition = [state, choose_action]
+        with T.no_grad():
+            if epsilon >= np.random.random() and not self.args.evaluate:
+                choose_action = np.random.uniform(self.low_action, self.max_action, self.n_actions)
+            else :
+                choose_action = self.actor_eval(T.as_tensor(state, device=self.actor_eval.device, dtype=T.float32)).detach().cpu().numpy()
+            if not self.args.evaluate:
+                noise = np.random.normal(0, self.max_action*self.args.exploration_noise, size=self.n_actions)
+                choose_action = np.clip(choose_action + noise, self.low_action, self.max_action)
+            self.transition = [state, choose_action]
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            noise = (T.randn_like(action) * self.args.policy_noise * self.max_action).clamp(self.args.noise_clip * self.low_action, self.args.noise_clip * self.max_action)
-            next_action = (self.actor_target(next_state) + noise).clamp(self.low_action, self.max_action)
-
-            next_target_q1, next_target_q2 = self.critic_target.get_double_q(next_state, next_action)
-            next_target_q = T.min(next_target_q1, next_target_q2)
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + next_target_q * mask
-
-        # Twin Critic Network Loss functions
-        current_q1, current_q2 = self.critic_eval.get_double_q(state, action)
-        # TD error
-        q1_loss = self.criterion(current_q1, target_q)
-        q2_loss = self.criterion(current_q2, target_q)
+        q1_loss, q2_loss, state = self._value_update(self.memory, self.args.batch_size)
         critic_loss = q1_loss + q2_loss
 
         # update value
@@ -747,13 +761,16 @@ class TD3Agent(object):
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        if self.total_step % self.args.policy_freq == 0:
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
+
         for p in self.critic_eval.parameters():
             p.requires_grad = False
 
         # actor network delay update
         if self.total_step % self.args.policy_freq == 0:
             # actor loss function
-            actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean()
+            actor_loss = self._policy_update(state)
 
             # update policy
             self.actor_optimizer.zero_grad()
@@ -762,7 +779,6 @@ class TD3Agent(object):
 
             # target network soft update
             self._target_soft_update(self.actor_target, self.actor_eval, self.args.tau)
-            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
 
         for p in self.critic_eval.parameters():
             p.requires_grad = True
@@ -784,6 +800,37 @@ class TD3Agent(object):
         with T.no_grad():
             for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
                 t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            noise = (T.randn_like(action) * self.args.policy_noise * self.max_action).clamp(self.args.noise_clip * self.low_action, self.args.noise_clip * self.max_action)
+            next_action = (self.actor_target(next_state) + noise).clamp(self.low_action, self.max_action)
+
+            next_target_q1, next_target_q2 = self.critic_target.get_double_q(next_state, next_action)
+            next_target_q = T.min(next_target_q1, next_target_q2)
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_q = reward + next_target_q * mask
+
+        # Twin Critic Network Loss functions
+        current_q1, current_q2 = self.critic_eval.get_double_q(state, action)
+        # TD error
+        q1_loss = self.criterion(current_q1, target_q)
+        q2_loss = self.criterion(current_q2, target_q)
+
+        return q1_loss, q2_loss, state
+
+    def _policy_update(self, state):
+        actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean()
+        return actor_loss
 
 class SACAgent(object):
     def __init__(self, args):
@@ -854,49 +901,31 @@ class SACAgent(object):
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_action, next_log_prob = self.actor(next_state)
-            next_target_q1, next_target_q2 = self.critic_target.get_double_q(next_state, next_action)
-            next_target_q = T.min(next_target_q1, next_target_q2)
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + (next_target_q - self.alpha * next_log_prob) * mask
-
-        # Twin Critic Network Loss functions
-        current_q1, current_q2 = self.critic_eval.get_double_q(state, action)
         # TD error
         # update value
-        q1_loss = self.criterion(current_q1, target_q)
-        q2_loss = self.criterion(current_q2, target_q)
+        q1_loss, q2_loss, state = self._value_update(self.memory, self.args.batch_size)
         critic_loss = q1_loss + q2_loss
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        # target network soft update
+        if self.total_step % self.args.target_update_interval == 0:
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
+
         for p in self.critic_eval.parameters():
             p.requires_grad = False
 
-        new_action, new_log_prob = self.actor(state)
-        q_1, q_2 = self.critic_eval.get_double_q(state, new_action)
-        q = T.min(q_1, q_2)
-        # update actor network
-        actor_loss = (self.alpha * new_log_prob - q).mean()
-        # update Temperature Coefficient
-        alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
+        actor_loss, new_log_prob = self._policy_update(state)
 
         # update Policy
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
+
+        # update Temperature Coefficient
+        alpha_loss = self._temperature_update(new_log_prob)
 
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
@@ -906,10 +935,6 @@ class SACAgent(object):
             p.requires_grad = True
 
         self.alpha = self.log_alpha.exp()
-
-        # target network soft update
-        if self.total_step % self.args.target_update_interval == 0:
-            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
 
     def save_models(self):
         print('------ Save model ------')
@@ -932,6 +957,43 @@ class SACAgent(object):
         with T.no_grad():
             for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
                 t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_action, next_log_prob = self.actor(next_state)
+            next_target_q1, next_target_q2 = self.critic_target.get_double_q(next_state, next_action)
+            next_target_q = T.min(next_target_q1, next_target_q2)
+            # Here we calculate action value Q(s,a) = R + yV(s')
+            target_q = reward + (next_target_q - self.alpha * next_log_prob) * mask
+
+        # Twin Critic Network Loss functions
+        current_q1, current_q2 = self.critic_eval.get_double_q(state, action)
+        # TD error
+        # update value
+        q1_loss = self.criterion(current_q1, target_q)
+        q2_loss = self.criterion(current_q2, target_q)
+        return q1_loss, q2_loss, state
+
+    def _policy_update(self, state):
+        new_action, new_log_prob = self.actor(state)
+        q_1, q_2 = self.critic_eval.get_double_q(state, new_action)
+        q = T.min(q_1, q_2)
+        # update actor network
+        actor_loss = (self.alpha * new_log_prob - q).mean()
+        return actor_loss, new_log_prob
+
+    def _temperature_update(self, new_log_prob):
+        alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
+        return alpha_loss
 
 class PPOAgent(object):
     def __init__(self, args):
@@ -1135,25 +1197,14 @@ class A2CAgent(object):
         return choose_action.clamp(self.low_action, self.max_action).detach().cpu().numpy()
 
     def learn(self):
-        state, log_prob, reward, next_state, mask = self.transition
-
-        # Q(s,a)   = r + gamma * V(s`)  if state != Terminal
-        #       = r                       otherwise
-        next_state = T.as_tensor(next_state, dtype=T.float32, device=self.args.device)
-        current_value = self.critic(state)
-        next_value = self.critic(next_state).detach()
-        target_value = reward + next_value * mask
-        critic_loss = self.criterion(current_value, target_value)
+        critic_loss, target_value, current_value, log_prob = self._value_update(self.transition)
 
         # update value
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
-        # advantage = Q_t - V(s_t)
-        advantage = (target_value - current_value).detach()  # not backpropagated
-        actor_loss = -advantage * log_prob
-        actor_loss += self.args.entropy_weight * -log_prob  # entropy maximization
+        actor_loss = self._policy_update(target_value, current_value, log_prob, self.args.entropy_weight)
 
         # update policy
         self.actor_optimizer.zero_grad()
@@ -1169,6 +1220,24 @@ class A2CAgent(object):
         print('------ load model ------')
         _load_model(self.actor, self.actor_path)
         _load_model(self.critic, self.critic_path)
+
+    def _value_update(self, transition):
+        state, log_prob, reward, next_state, mask = transition
+        # Q(s,a)   = r + gamma * V(s`)  if state != Terminal
+        #       = r                       otherwise
+        next_state = T.as_tensor(next_state, dtype=T.float32, device=self.args.device)
+        current_value = self.critic(state)
+        next_value = self.critic(next_state).detach()
+        target_value = reward + next_value * mask
+        critic_loss = self.criterion(current_value, target_value)
+        return critic_loss, target_value, current_value, log_prob
+
+    def _policy_update(self, target_value, current_value, log_prob, entropy_weight):
+        # advantage = Q_t - V(s_t)
+        advantage = (target_value - current_value).detach()  # not backpropagated
+        actor_loss = -advantage * log_prob
+        actor_loss += entropy_weight * -log_prob  # entropy maximization
+        return actor_loss
 
 class BC_SACAgent(object):
     def __init__(self, args):
@@ -1248,34 +1317,7 @@ class BC_SACAgent(object):
         return choose_action
 
     def learn(self):
-        with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            samples = self.memory.sample_batch(self.args.batch_size)
-
-            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
-            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
-            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            samples_bc = self.bc_data.sample_batch(self.args.bc_batch_size)
-
-            state_bc = T.as_tensor(samples_bc['state'], dtype=T.float32, device=self.args.device)
-            next_state_bc = T.as_tensor(samples_bc['next_state'], dtype=T.float32, device=self.args.device)
-            action_bc = T.as_tensor(samples_bc['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
-            reward_bc = T.as_tensor(samples_bc['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-            mask_bc = T.as_tensor(samples_bc['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
-
-            next_action, next_log_prob = self.actor(next_state)
-            next_target_q1, next_target_q2 = self.critic_target.get_double_q(next_state, next_action)
-            next_target_q = T.min(next_target_q1, next_target_q2)
-            target_q = reward + (next_target_q - self.alpha * next_log_prob) * mask
-
-        # Twin Critic Network Loss functions
-        current_q1, current_q2 = self.critic_eval.get_double_q(state, action)
-        # TD error
-        q1_loss = self.criterion(current_q1, target_q)
-        q2_loss = self.criterion(current_q2, target_q)
+        q1_loss, q2_loss, state = self._value_update(self.memory, self.args.batch_size)
         critic_loss = q1_loss + q2_loss
 
         # update value
@@ -1283,28 +1325,22 @@ class BC_SACAgent(object):
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        # target network soft update
+        if self.total_step % self.args.target_update_interval == 0:
+            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
+
         for p in self.critic_eval.parameters():
             p.requires_grad = False
 
-        new_action, new_log_prob = self.actor(state)
-        q_1, q_2 = self.critic_eval.get_double_q(state, new_action)
-        q = T.min(q_1, q_2)
-        pg_loss = (self.alpha * new_log_prob - q).mean()
-        alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
+        pg_loss, new_log_prob = self._policy_update(state)
 
-        pred_action, _ = self.actor(state_bc)
-        q_t = T.min(*self.critic_eval.get_double_q(state_bc, action_bc))
-        q_e = T.min(*self.critic_eval.get_double_q(state_bc, pred_action))
-        qf_mask = T.gt(q_t, q_e).to(self.args.device)
-        qf_mask = qf_mask.float()
-        n_qf_mask = int(qf_mask.sum().item())
+        alpha_loss = self._temperature_update(new_log_prob)
 
-        if n_qf_mask == 0:
-            bc_loss = T.zeros(1, device=self.args.device)
-        else:
-            bc_loss = (
-                T.mul(pred_action, qf_mask) - T.mul(action_bc, qf_mask)
-            ).pow(2).sum() / n_qf_mask
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
+
+        bc_loss = self._behavioral_cloning_update(self.bc_data, self.args.bc_batch_size)
 
         # Behavior Cloning with Actor Loss Function
         actor_loss = self.lambda1 * pg_loss + self.lambda2 * bc_loss
@@ -1314,18 +1350,10 @@ class BC_SACAgent(object):
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        self.alpha_optimizer.zero_grad()
-        alpha_loss.backward()
-        self.alpha_optimizer.step()
-
         for p in self.critic_eval.parameters():
             p.requires_grad = True
 
         self.alpha = self.log_alpha.exp()
-
-        # target network soft update
-        if self.total_step % self.args.target_update_interval == 0:
-            self._target_soft_update(self.critic_target, self.critic_eval, self.args.tau)
 
     def save_models(self):
         print('------ Save model ------')
@@ -1348,6 +1376,66 @@ class BC_SACAgent(object):
         with T.no_grad():
             for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
                 t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
+
+    def _value_update(self, buffer, batch_size):
+        with T.no_grad():
+            # Select data from ReplayBuffer with batch_size size
+            samples = buffer.sample_batch(batch_size)
+
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+            next_action, next_log_prob = self.actor(next_state)
+            next_target_q1, next_target_q2 = self.critic_target.get_double_q(next_state, next_action)
+            next_target_q = T.min(next_target_q1, next_target_q2)
+            target_q = reward + (next_target_q - self.alpha * next_log_prob) * mask
+
+        # Twin Critic Network Loss functions
+        current_q1, current_q2 = self.critic_eval.get_double_q(state, action)
+        # TD error
+        q1_loss = self.criterion(current_q1, target_q)
+        q2_loss = self.criterion(current_q2, target_q)
+        return q1_loss, q2_loss, state
+
+    def _policy_update(self, state):
+        new_action, new_log_prob = self.actor(state)
+        q_1, q_2 = self.critic_eval.get_double_q(state, new_action)
+        q = T.min(q_1, q_2)
+        actor_loss = (self.alpha * new_log_prob - q).mean()
+        return actor_loss, new_log_prob
+
+    def _temperature_update(self, new_log_prob):
+        alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
+        return alpha_loss
+
+    def _behavioral_cloning_update(self, buffer, batch_size):
+        with T.no_grad():
+            samples_bc = buffer.sample_batch(batch_size)
+
+            state_bc = T.as_tensor(samples_bc['state'], dtype=T.float32, device=self.args.device)
+            next_state_bc = T.as_tensor(samples_bc['next_state'], dtype=T.float32, device=self.args.device)
+            action_bc = T.as_tensor(samples_bc['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            reward_bc = T.as_tensor(samples_bc['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+            mask_bc = T.as_tensor(samples_bc['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
+
+        pred_action, _ = self.actor(state_bc)
+        q_t = T.min(*self.critic_eval.get_double_q(state_bc, action_bc))
+        q_e = T.min(*self.critic_eval.get_double_q(state_bc, pred_action))
+        qf_mask = T.gt(q_t, q_e).to(self.args.device)
+        qf_mask = qf_mask.float()
+        n_qf_mask = int(qf_mask.sum().item())
+
+        if n_qf_mask == 0:
+            bc_loss = T.zeros(1, device=self.args.device)
+        else:
+            bc_loss = (
+                T.mul(pred_action, qf_mask) - T.mul(action_bc, qf_mask)
+            ).pow(2).sum() / n_qf_mask
+
+        return bc_loss
 
 # generalized advantage estimator
 def compute_gae(next_value, rewards, masks, values, gamma = 0.99, tau = 0.95,):
