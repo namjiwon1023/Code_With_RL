@@ -122,9 +122,12 @@ Reinforcement learning **algorithms** that can now be selected:
 + **BC_SAC**
 
 <br/>
-Discrete action space recommendation: Dueling DoubleQN (D3QN)
+
+Discrete action space recommendation: **Dueling DoubleQN (D3QN)**
+
 <br/>
-Continuous action space recommendation: use TD3 if you are good at tuning parameters, use PPO or SAC if you are not good at tuning parameters, if the training environment Reward function is written by beginners, then use PPO
+
+Continuous action space recommendation: use **TD3** if you are **good at tuning parameters**, use **PPO** or **SAC** if you are **not good at tuning parameters**, if the training **environment Reward function is written by beginners**, then use **PPO** .
 
 ## Training Environment
 Discrete action :
