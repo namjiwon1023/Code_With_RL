@@ -1,4 +1,6 @@
-<div align=center>![ICSL_LAB_HanYang](./Tutorials/assets/icsl_lab)
+<p align="center">
+<img src="./Tutorials/assets/icsl_lab" align="center">
+</p>
 
 # Code With Deep Reinforcement Learning
 
