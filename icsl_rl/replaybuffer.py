@@ -45,14 +45,23 @@ class ReplayBuffer:
                     mask = self.masks[index],
                     )
 
+        '''
+        Spinning up style
+        from https://github.com/openai/spinningup
+        batch = dict(state = self.states[index],
+                    action = self.actions[index],
+                    reward = self.rewards[index],
+                    next_state = self.next_states[index],
+                    mask = self.masks[index],
+                    )
+        return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in batch.items()}
+        '''
+
     def clear(self):
 
         self.states = np.empty([self.max_size, self.n_states], dtype=np.float32)
         self.next_states = np.empty([self.max_size, self.n_states], dtype=np.float32)
-        if self.n_actions == 1:
-            self.actions = np.empty([self.max_size], dtype=np.float32)
-        else:
-            self.actions = np.empty([self.max_size, self.n_actions], dtype=np.float32)
+        self.actions = np.empty([self.max_size], dtype=np.float32)
         self.rewards = np.empty([self.max_size], dtype=np.float32)
         self.masks = np.empty([self.max_size], dtype=np.float32)
 
