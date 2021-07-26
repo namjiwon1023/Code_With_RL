@@ -6,10 +6,16 @@ import matplotlib.pyplot as plt
 import yaml
 import copy
 
+# from https://github.com/openai/spinningup
+######################################
+def count_vars(module):
+    return sum([np.prod(p.shape) for p in module.parameters()])
+
 def combined_shape(length, shape=None):    # np.zeros(combined_shape(size, act_dim), dtype=np.float32)
     if shape is None:
         return (length,)
     return (length, shape) if np.isscalar(shape) else (length, *shape)
+#############################################
 
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
