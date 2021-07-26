@@ -330,6 +330,14 @@ def reset_parameters(Sequential, std=1.0, bias_const=1e-6):
             nn.init.constant_(layer.bias, bias_const)
 
 def reset_single_layer_parameters(layer, std=1.0, bias_const=1e-6):
-        if isinstance(layer, nn.Linear):
-            nn.init.orthogonal_(layer.weight, std)
-            nn.init.constant_(layer.bias, bias_const)
+    if isinstance(layer, nn.Linear):
+        nn.init.orthogonal_(layer.weight, std)
+        nn.init.constant_(layer.bias, bias_const)
+
+def create_mlp(sizes, activation, output_activation=nn.Identity):
+    layers = []
+    for j in range(len(sizes)-1):
+        act = activation if j < len(sizes)-2 else output_activation
+        layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
+    return nn.Sequential(*layers)
+

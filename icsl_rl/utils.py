@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 import yaml
 import copy
 
+def combined_shape(length, shape=None):    # np.zeros(combined_shape(size, act_dim), dtype=np.float32)
+    if shape is None:
+        return (length,)
+    return (length, shape) if np.isscalar(shape) else (length, *shape)
+
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
     gif_name = '_'.join([envname])
