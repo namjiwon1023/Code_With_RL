@@ -1,5 +1,5 @@
 <p align="center">
-<img width="480" height="640" src="./Tutorials/assets/icsl_lab" align="center">
+<img width="496" height="190.5" src="./Tutorials/assets/icsl_lab" align="center">
 </p>
 
 # Code With Deep Reinforcement Learning
