@@ -27,7 +27,7 @@
 
 ### ReplayBuffer Structure
 
-- [ ] Prioritized Experience Replay(PER)
+- [x] Prioritized Experience Replay(PER)
 - [ ] Hindsight Experience Replay(HER)
 
 ### Explore
