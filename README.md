@@ -176,6 +176,19 @@ tensorboard : pip install tensorboard
 
 ```
 
+## Citation:
+To cite this repository:
+```
+@misc{algorithms_drl,
+  author = {Zhiyuan Nan},
+  title = {Code With Deep Reinforcement Learning},
+  year = {2021},
+  publisher = {Github},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/namjiwon1023/Code_With_RL}},
+}
+```
+
 ## References
 
 [Key Papers in Deep RL](https://spinningup.openai.com/en/latest/spinningup/keypapers.html#id106)
