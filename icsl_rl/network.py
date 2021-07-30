@@ -2,7 +2,7 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import os
-import numpy
+import numpy as np
 import math
 from torch.distributions import Normal, Categorical
 import random
@@ -323,6 +323,37 @@ class CriticTwin(nn.Module): # Twin Delayed Deep Deterministic Policy Gradients(
         Q2 = self.Value2(cat)
         return Q1, Q2
 
+class DiagonalGaussianDistribution:
+
+    def __init__(self, mu, log_std):
+        self.mu = mu
+        self.log_std = log_std
+
+    def sample(self):
+        return self.mu + T.exp(self.log_std) * T.randn_like(self.mu)
+
+    def log_prob(self, value):
+        return gaussian_likelihood(value, self.mu, self.log_std)
+
+    def entropy(self):
+        return 0.5 + 0.5 * np.log(2 * np.pi) + self.log_std.sum(axis=-1)
+
+class MLPGaussianActor(nn.Module):
+
+    def __init__(self, obs_dim, act_dim, hidden_sizes, activation):
+        super().__init__()
+        log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
+        self.log_std = T.nn.Parameter(T.as_tensor(log_std))
+        self.mu_net = create_mlp([obs_dim] + list(hidden_sizes) + [act_dim], activation)
+
+    def forward(self, obs, act=None):
+        mu = self.mu_net(obs)
+        pi = DiagonalGaussianDistribution(mu, self.log_std)
+        logp_a = None
+        if act is not None:
+            logp_a = pi.log_prob(act)
+        return pi, logp_a
+
 def reset_parameters(Sequential, std=1.0, bias_const=1e-6):
     for layer in Sequential:
         if isinstance(layer, nn.Linear):
@@ -341,3 +372,6 @@ def create_mlp(sizes, activation, output_activation=nn.Identity):
         layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
     return nn.Sequential(*layers)
 
+def gaussian_likelihood(x, mu, log_std, eps=1e-8):
+    pre_sum = -0.5 * (((x-mu)/(T.exp(log_std)+eps))**2 + 2*log_std + np.log(2*np.pi))
+    return pre_sum.sum(axis=-1)

@@ -5,6 +5,8 @@ import os
 import matplotlib.pyplot as plt
 import yaml
 import copy
+import torch as T
+import torch.nn as nn
 
 # from https://github.com/openai/spinningup
 ######################################
@@ -15,6 +17,7 @@ def combined_shape(length, shape=None):    # np.zeros(combined_shape(size, act_d
     if shape is None:
         return (length,)
     return (length, shape) if np.isscalar(shape) else (length, *shape)
+
 #############################################
 
 def _make_gif(policy, env, args, maxsteps=1000):
