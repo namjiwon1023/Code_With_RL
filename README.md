@@ -24,6 +24,9 @@
 - [x] Twin Delayed Deep Deterministic policy gradient(TD3) (off-policy)
 - [x] Soft Actor-Critic(SAC) (off-policy)
 
+### Deep reinforcement learning with a latent variable model
+- [ ] Stochastic Latent Actor-Critic(SLAC)
+
 ### Imitation Learning / Inverse Reinforcement Learning
 
 - [x] Behavior Cloning(BC)
