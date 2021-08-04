@@ -375,3 +375,6 @@ def create_mlp(sizes, activation, output_activation=nn.Identity):
 def gaussian_likelihood(x, mu, log_std, eps=1e-8):
     pre_sum = -0.5 * (((x-mu)/(T.exp(log_std)+eps))**2 + 2*log_std + np.log(2*np.pi))
     return pre_sum.sum(axis=-1)
+
+def conv2d_size_out(size, kernel_size, stride, padding):
+    return ((size + 2 * padding - kernel_size) // stride) + 1
