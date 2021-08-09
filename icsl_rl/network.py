@@ -378,3 +378,9 @@ def gaussian_likelihood(x, mu, log_std, eps=1e-8):
 
 def conv2d_size_out(size, kernel_size, stride, padding):
     return ((size + 2 * padding - kernel_size) // stride) + 1
+
+def initialize_weight(m):
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        nn.init.xavier_uniform_(m.weight, gain=1.0)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
