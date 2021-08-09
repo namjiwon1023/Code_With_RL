@@ -365,12 +365,33 @@ def reset_single_layer_parameters(layer, std=1.0, bias_const=1e-6):
         nn.init.orthogonal_(layer.weight, std)
         nn.init.constant_(layer.bias, bias_const)
 
+################# MLP building #################
 def create_mlp(sizes, activation, output_activation=nn.Identity):
+    # OpenAI style
     layers = []
     for j in range(len(sizes)-1):
         act = activation if j < len(sizes)-2 else output_activation
         layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
     return nn.Sequential(*layers)
+
+def build_mlp(
+    input_dim,
+    output_dim,
+    hidden_units=[64, 64],
+    hidden_activation=nn.Tanh(),
+    output_activation=None,
+):
+    layers = []
+    units = input_dim
+    for next_units in hidden_units:
+        layers.append(nn.Linear(units, next_units))
+        layers.append(hidden_activation)
+        units = next_units
+    layers.append(nn.Linear(units, output_dim))
+    if output_activation is not None:
+        layers.append(output_activation)
+    return nn.Sequential(*layers)
+########################################
 
 def gaussian_likelihood(x, mu, log_std, eps=1e-8):
     pre_sum = -0.5 * (((x-mu)/(T.exp(log_std)+eps))**2 + 2*log_std + np.log(2*np.pi))
