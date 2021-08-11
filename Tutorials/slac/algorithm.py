@@ -170,7 +170,7 @@ class SlacAlgorithm:
         # a(t)
         a_t = action[:, -1]
         # fa(t)=(x(1:t), a(1:t-1)), fa(t+1)=(x(2:t+1), a(2:t))
-        feature_action, next_feature_action = self.create_feature_actions(feature, action)
+        feature_action, next_feature_action = create_input(feature, action)
 
         return z_t, next_z, a_t, feature_action, next_feature_action
 
@@ -200,7 +200,7 @@ class SlacAlgorithm:
         loss_actor.backward()
         self.actor_optimizer.step()
 
-        with torch.no_grad():
+        with T.no_grad():
             entropy = -new_log_prob.detach().mean()
 
         loss_alpha = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
@@ -209,7 +209,7 @@ class SlacAlgorithm:
         loss_alpha.backward()
         self.alpha_optimizer.step()
 
-        with torch.no_grad():
+        with T.no_grad():
             self.alpha = self.log_alpha.exp()
 
         if self.learning_steps_sac % 1000 == 0:
