@@ -14,7 +14,7 @@ class GaussianPolicy(nn.Module):
     input: feature * sequences(t) + sequences(t-1) * action
     PI(a(t+1)|x(1:t+1), a(1:t))
     """
-    def __init__(self, action_shape, num_sequences, feature_dim, hidden_units=(256, 256), min_log_std=-20, max_log_std=2):
+    def __init__(self, action_shape, num_sequences, feature_dim, device, hidden_units=(256, 256), min_log_std=-20, max_log_std=2):
         super(GaussianPolicy, self).__init__()
         # NOTE: Conv layers are shared with the latent model.
         self.net = build_mlp(
@@ -25,6 +25,8 @@ class GaussianPolicy(nn.Module):
             ).apply(initialize_weight)
         self.min_log_std = min_log_std
         self.max_log_std = max_log_std
+        self.device = device
+        self.to(self.device)
 
     # Test functions
     def forward(self, feature_action):
@@ -50,6 +52,7 @@ class TwinnedQNetwork(nn.Module):
         action_shape,
         z1_dim,
         z2_dim,
+        device,
         hidden_units=(256, 256),
     ):
         super(TwinnedQNetwork, self).__init__()
@@ -69,6 +72,9 @@ class TwinnedQNetwork(nn.Module):
             hidden_units=hidden_units,
             hidden_activation=nn.ReLU(inplace=True),
         ).apply(initialize_weight)
+
+        self.device = device
+        self.to(self.device)
 
     def forward(self, z, action):
         x = T.cat([z, action], dim=1)

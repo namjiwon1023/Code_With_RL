@@ -148,6 +148,7 @@ class LatentModel(nn.Module):
         self,
         state_shape,
         action_shape,
+        device,
         feature_dim=256,
         z1_dim=32,
         z2_dim=256,
@@ -196,6 +197,8 @@ class LatentModel(nn.Module):
         self.encoder = Encoder(state_shape[0], feature_dim)
 
         self.apply(initialize_weight)
+        self.device = device
+        self.to(self.device)
 
 
     def sample_prior(self, actions):
