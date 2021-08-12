@@ -14,10 +14,10 @@ import gym
 from gym.wrappers import RescaleAction
 
 from collections import deque
-from icsl_rl.network import QNetwork, DuelingNetwork
-from icsl_rl.network import Actor, ActorA2C, ActorPPO, ActorSAC, CriticQ, CriticV, CriticTwin
-from icsl_rl.replaybuffer import ReplayBuffer, ReplayBufferPPO
-from icsl_rl.utils import OUNoise
+from test.network import QNetwork, DuelingNetwork
+from test.network import Actor, ActorA2C, ActorPPO, ActorSAC, CriticQ, CriticV, CriticTwin
+from test.replaybuffer import ReplayBuffer, ReplayBufferPPO
+from test.utils import OUNoise
 
 class DQNAgent(object):
     def __init__(self, args):

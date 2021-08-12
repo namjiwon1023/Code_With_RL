@@ -6,7 +6,7 @@
 import numpy as np
 import random
 
-from icsl_rl.segment_tree import MinSegmentTree, SumSegmentTree
+from test.segment_tree import MinSegmentTree, SumSegmentTree
 
 class ReplayBuffer:
     def __init__(self, n_states, n_actions, args, buffer_size=None):

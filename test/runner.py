@@ -4,7 +4,7 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 import numpy as np
-from icsl_rl.utils import _make_gif, _evaluate_agent, _store_expert_data
+from test.utils import _make_gif, _evaluate_agent, _store_expert_data
 import torch as T
 
 class Runner:
