@@ -25,7 +25,7 @@
 - [x] Soft Actor-Critic(SAC) (off-policy)
 
 ### Deep reinforcement learning with a latent variable model
-- [ ] Stochastic Latent Actor-Critic(SLAC)
+- [x] Stochastic Latent Actor-Critic(SLAC)
 
 ### Imitation Learning / Inverse Reinforcement Learning
 
