@@ -1,0 +1,30 @@
+# Soft Actor-Critic
+# You can modify the hyperparameters here
+
+algorithm: 'SAC'
+actor_lr: 0.0003      # Actor Network learning rate
+critic_lr: 0.0003      # Critic Network learning rate
+alpha_lr: 0.0003
+
+min_log_std: -20
+max_log_std: 2
+with_logprob: True
+
+
+gamma: 0.99           # discount factor
+tau: 0.005             # parameter for updating the target network(soft update)
+hidden_size: 128      # hidden layer units
+target_update_interval: 1        # target net soft update rate
+buffer_size: 100000    # number of transitions can be stored in buffer
+batch_size: 256        # number of episodes to optimize at the same time
+
+# explore
+epsilon: 1.0          # Probability of performing a random action
+min_epsilon: 0.1      # Probability of performing a random action
+epsilon_decay: 0.0001 # attenuation rate
+
+use_epsilon: True
+is_discrete: False
+
+use_noisy_layer: False
+is_off_policy: True
