@@ -1,10 +1,18 @@
+# Copyright (c) 2021: Zhiyuan Nan (namjw@hanyang.ac.kr).
+#
+# This file is modified from <https://github.com/openai/spinningup>:
+# Copyright (c) 2020 openai
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
 import multiprocessing
 import numpy as np
 import os
 import torch
 from mpi4py import MPI
 from icsl_rl.mpi_tools import broadcast, mpi_avg, num_procs, proc_id
-# from https://github.com/openai/spinningup
+
 def setup_pytorch_for_mpi():
     """
     Avoid slowdowns caused by each separate process's PyTorch using

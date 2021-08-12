@@ -1,3 +1,8 @@
+# Copyright (c) 2021: Zhiyuan Nan (namjw@hanyang.ac.kr).
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
 import copy
 import random
 import numpy as np
@@ -19,7 +24,7 @@ class A2CAgent(object):
         self.args = args
 
         self.env = gym.make(args.env_name)
-        # self.env = RescaleAction(self.env, -1, 1)
+
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
 

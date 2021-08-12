@@ -1,3 +1,8 @@
+# Copyright (c) 2021: Zhiyuan Nan (namjw@hanyang.ac.kr).
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
 from tqdm import tqdm
 from algorithm.agent import Agent
 from utils.ReplayBuffer import MultiAgentReplayBuffer

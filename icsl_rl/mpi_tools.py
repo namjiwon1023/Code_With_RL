@@ -1,8 +1,14 @@
+# Copyright (c) 2021: Zhiyuan Nan (namjw@hanyang.ac.kr).
+#
+# This file is modified from <https://github.com/openai/spinningup>:
+# Copyright (c) 2020 openai
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
 from mpi4py import MPI
 import os, subprocess, sys
 import numpy as np
 
-# from https://github.com/openai/spinningup
 def mpi_fork(n, bind_to_core=False):
     """
     Re-launches the current script with workers linked by MPI.

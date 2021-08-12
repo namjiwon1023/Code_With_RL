@@ -1,3 +1,8 @@
+# Copyright (c) 2021: Zhiyuan Nan (namjw@hanyang.ac.kr).
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
 from utils.runner import Runner
 from utils.arguments import get_args
 from utils.make_env import make_env
