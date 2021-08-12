@@ -1,1 +1,4 @@
-Folder for testing new features
+Folder for testing new function
+
+For example : PER, MPI, HER, MultiGPU
+
