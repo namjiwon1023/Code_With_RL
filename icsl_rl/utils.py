@@ -12,18 +12,7 @@ import yaml
 import copy
 import torch as T
 import torch.nn as nn
-
-# from https://github.com/openai/spinningup
-######################################
-def count_vars(module):
-    return sum([np.prod(p.shape) for p in module.parameters()])
-
-def combined_shape(length, shape=None):    # np.zeros(combined_shape(size, act_dim), dtype=np.float32)
-    if shape is None:
-        return (length,)
-    return (length, shape) if np.isscalar(shape) else (length, *shape)
-
-#############################################
+import math
 
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
@@ -48,30 +37,6 @@ def _make_gif(policy, env, args, maxsteps=1000):
     clip = ImageSequenceClip(steps, fps=30)
     if not os.path.isdir('gifs'):
         os.makedirs('gifs')
-    if not os.path.isdir('gifs' + '/' + args.algorithm):
-        os.makedirs('gifs' + '/' + args.algorithm)
-    clip.write_gif('gifs' + '/'  + args.algorithm + '/{}.gif'.format(gif_name), fps=30)
-
-def _make_gif_for_train(policy, env, args, step_count, maxsteps=1000):
-    envname = env.spec.id
-    gif_name = '_'.join([envname, str(step_count)])
-    state = env.reset()
-    done = False
-    steps = []
-    rewards = []
-    t = 0
-    while (not done) & (t< maxsteps):
-        s = env.render('rgb_array')
-        steps.append(s)
-        if args.use_epsilon:
-            action = policy.choose_action(state, 0)
-        else:
-            action = policy.choose_action(state)
-        state, reward, done, _ = env.step(action)
-        rewards.append(reward)
-        t +=1
-    print('Final reward :', np.sum(rewards))
-    clip = ImageSequenceClip(steps, fps=30)
     if not os.path.isdir('gifs' + '/' + args.algorithm):
         os.makedirs('gifs' + '/' + args.algorithm)
     clip.write_gif('gifs' + '/'  + args.algorithm + '/{}.gif'.format(gif_name), fps=30)
@@ -172,3 +137,62 @@ class OUNoise:
         )
         self.state = x + dx
         return self.state
+
+def _target_soft_update(target, eval, tau):
+    with T.no_grad():
+        for t_p, l_p in zip(target.parameters(), eval.parameters()):
+            t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
+
+def _target_net_update(target, eval):
+    with T.no_grad():
+        target.load_state_dict(eval.state_dict())
+
+def build_mlp(
+    input_dim,
+    output_dim,
+    hidden_units=[128, 128],
+    hidden_activation=nn.ReLU(),
+    output_activation=None,
+):
+    layers = []
+    units = input_dim
+    for next_units in hidden_units:
+        layers.append(nn.Linear(units, next_units))
+        layers.append(hidden_activation)
+        units = next_units
+    layers.append(nn.Linear(units, output_dim))
+    if output_activation is not None:
+        layers.append(output_activation)
+    return nn.Sequential(*layers)
+
+def calculate_gaussian_log_prob(log_std, noise):
+    return (-0.5 * noise.pow(2) - log_std).sum(dim=-1, keepdim=True) - 0.5 * math.log(2 * math.pi) * log_std.size(-1)
+
+def calculate_log_pi(log_std, noise, action):
+    gaussian_log_prob = calculate_gaussian_log_prob(log_std, noise)
+    return gaussian_log_prob - T.log(1 - action.pow(2) + 1e-6).sum(dim=-1, keepdim=True)
+
+def reparameterize(mean, log_std):
+    noise = T.randn_like(mean)
+    action = T.tanh(mean + noise * log_std.exp())
+    return action, calculate_log_pi(log_std, noise, action)
+
+def calculate_kl_divergence(p_mean, p_std, q_mean, q_std):
+    var_ratio = (p_std / q_std).pow_(2)
+    t1 = ((p_mean - q_mean) / q_std).pow_(2)
+    return 0.5 * (var_ratio + t1 - 1 - var_ratio.log())
+
+def initialize_weight(m, std=1.0, bias_const=1e-6):
+    '''
+    In many papers, it is recommended to use the orthogonal method to initialize the network
+    '''
+    if isinstance(m, nn.Linear):
+        nn.init.orthogonal_(m.weight, std)
+        nn.init.constant_(m.bias, bias_const)
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        nn.init.xavier_uniform_(m.weight, gain=1.0)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
+
+def conv2d_size_out(size, kernel_size, stride, padding):
+    return ((size + 2 * padding - kernel_size) // stride) + 1
