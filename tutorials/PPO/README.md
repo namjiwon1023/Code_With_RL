@@ -6,7 +6,7 @@
 
 John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov
 
-[`PAPER`](https://arxiv.org/pdf/1707.06347.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/PPO/algorithm/agent.py)
+[`PAPER`](https://arxiv.org/pdf/1707.06347.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/PPO/algorithm/agent.py)
 
 <br/>
 

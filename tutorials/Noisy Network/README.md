@@ -7,7 +7,7 @@
 
 Fortunato, Meire, et al. "Noisy networks for exploration." arXiv preprint arXiv:1706.10295 (2017).
 
-​	[`PAPER`](https://arxiv.org/pdf/1706.10295.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/Noisy%20Network/network.py)
+​	[`PAPER`](https://arxiv.org/pdf/1706.10295.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/Noisy%20Network/network.py)
 
 <br/>
 
@@ -27,7 +27,7 @@ NoisyNet 은 네트워크의 weight 에 perturbation 을 주어 exploration 을 
 
 이를 그림으로 표현하면 다음과 같다:
 
-![noisynet](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/assets/dqn-noisynet.png)
+![noisynet](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/assets/dqn-noisynet.png)
 
 여기서 <img src="http://chart.googleapis.com/chart?cht=tx&chl=\mu" style="border:none;"> 와 <img src="http://chart.googleapis.com/chart?cht=tx&chl=\sigma" style="border:none;"> 는 learnable parameter 이고, <img src="http://chart.googleapis.com/chart?cht=tx&chl=\epsilon" style="border:none;"> 은 학습이 안 되는 noise 에 해당한다.
 

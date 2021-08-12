@@ -1,7 +1,7 @@
 # Code With Deep Reinforcement Learning
 
 <p align="center">
-<img width="440.9" height="169.4" src="./Tutorials/assets/icsl_lab" align="center">
+<img width="440.9" height="169.4" src="./tutorials/assets/icsl_lab" align="center">
 </p>
 
 ## Single Agent Algorithm
@@ -134,17 +134,17 @@ Continuous action space recommendation: use **TD3** if you are **good at tuning 
 Discrete action :
 <br/>
 
-<img width="200" height="200" src="./Tutorials/assets/CartPole.gif" />
+<img width="200" height="200" src="./tutorials/assets/CartPole.gif" />
 
 Continuous action :
 <br/>
 
-<img width="200" height="200" src="./Tutorials/assets/Pendulum.gif" />
+<img width="200" height="200" src="./tutorials/assets/Pendulum.gif" />
 
 Multi-Agent Training Environment:
 <br/>
 
-<img width="200" height="200" src="./Tutorials/assets/Predator-Prey.gif" />
+<img width="200" height="200" src="./tutorials/assets/Predator-Prey.gif" />
 
 ## Training Result
 
@@ -152,9 +152,9 @@ Value Based Algorithm Compare Result:
 
 <br/>
 
-<img src="./Tutorials/assets/Result/compare.jpg"/>
-<img src="./Tutorials/assets/Result/value_based_avg_reward_compare.jpg"/>
-<img src="./Tutorials/assets/Result/value_step_compare.jpg"/>
+<img src="./tutorials/assets/Result/compare.jpg"/>
+<img src="./tutorials/assets/Result/value_based_avg_reward_compare.jpg"/>
+<img src="./tutorials/assets/Result/value_step_compare.jpg"/>
 
 <br/>
 
@@ -162,9 +162,9 @@ Policy Based Algorithm Compare Result:
 
 <br/>
 
-<img src="./Tutorials/assets/Result/Policy_total_reward_compare.jpg"/>
-<img src="./Tutorials/assets/Result/Policy_based_avg_reward_compare.jpg"/>
-<img src="./Tutorials/assets/Result/policy_step_compare.jpg"/>
+<img src="./tutorials/assets/Result/Policy_total_reward_compare.jpg"/>
+<img src="./tutorials/assets/Result/Policy_based_avg_reward_compare.jpg"/>
+<img src="./tutorials/assets/Result/policy_step_compare.jpg"/>
 
 
 ## Requirements

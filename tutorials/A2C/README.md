@@ -15,7 +15,7 @@ Policy gradient theorem 을 통해 얻을 수 있는 (vanilla) policy gradient �
 
 여기서 여러가지 변주를 줄 수 있는데, GAE 논문에 잘 정리되어 있다.
 
-![pg-gae](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/assets/pg-gae.png)
+![pg-gae](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/assets/pg-gae.png)
 
 여기서 1, 2번이 REINFORCE 에 해당하고, 3번이 REINFORCE with baseline, 4, 5, 6번이 Actor-Critic 에 해당한다.
 
@@ -40,15 +40,15 @@ Actor-critic 에서는 return G 를 Q-network 으로 approximate 하고, bootstr
 
 Mnih, Volodymyr, et al. "Asynchronous methods for deep reinforcement learning." International conference on machine learning. PMLR, 2016.
 
-​	[`PAPER`](https://arxiv.org/pdf/1602.01783.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/A2C/algorithm/agent.py)
+​	[`PAPER`](https://arxiv.org/pdf/1602.01783.pdf)	|	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/A2C/algorithm/agent.py)
 
 <br/>
 
-![pg-ac-alg](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/assets/pg-ac-alg.png)
+![pg-ac-alg](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/assets/pg-ac-alg.png)
 
 Actor-critic 은 이러한 Q actor-critic 외에도 여러 종류가 있다:
 
-![pg-actor-critic](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/assets/pg-ac.png)
+![pg-actor-critic](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/assets/pg-ac.png)
 *Image taken from CMU CS10703 lecture slides*
 
 Critic 으로 advantage function A(s,a) 를 사용하는 advantage actor-critic 이 바로 A2C 다. 여기서 여러개의 actor 를 두고 업데이트를 asynchronous 하게 수행하는 A3C 로 발전한다.

@@ -6,7 +6,7 @@
 
 Scott Fujimoto , Herke van Hoof , David Meger (2018)
 
-[`PAPER`](https://arxiv.org/pdf/1802.09477.pdf)   |	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/Tutorials/TD3/algorithm/agent.py)
+[`PAPER`](https://arxiv.org/pdf/1802.09477.pdf)   |	[`CODE`](https://github.com/namjiwon1023/Code_With_RL/blob/main/tutorials/TD3/algorithm/agent.py)
 
 <br/>
 
