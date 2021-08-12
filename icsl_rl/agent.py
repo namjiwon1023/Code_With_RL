@@ -108,7 +108,7 @@ class DQNAgent(object):
             samples = buffer.sample_batch(batch_size)
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -210,7 +210,7 @@ class DoubleDQNAgent(object):
             samples = buffer.sample_batch(batch_size)
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -315,7 +315,7 @@ class DuelingDQNAgent(object):
             samples = buffer.sample_batch(batch_size)
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -419,7 +419,7 @@ class D3QNAgent(object):
             samples = buffer.sample_batch(batch_size)
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -524,7 +524,7 @@ class NoisyDQNAgent(object):
             samples = buffer.sample_batch(batch_size)
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -669,7 +669,7 @@ class DDPGAgent(object):
 
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -813,7 +813,7 @@ class TD3Agent(object):
 
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -970,7 +970,7 @@ class SACAgent(object):
 
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -1389,7 +1389,7 @@ class BC_SACAgent(object):
 
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
@@ -1422,7 +1422,7 @@ class BC_SACAgent(object):
 
             state_bc = T.as_tensor(samples_bc['state'], dtype=T.float32, device=self.args.device)
             next_state_bc = T.as_tensor(samples_bc['next_state'], dtype=T.float32, device=self.args.device)
-            action_bc = T.as_tensor(samples_bc['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            action_bc = T.as_tensor(samples_bc['action'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
             reward_bc = T.as_tensor(samples_bc['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask_bc = T.as_tensor(samples_bc['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 
