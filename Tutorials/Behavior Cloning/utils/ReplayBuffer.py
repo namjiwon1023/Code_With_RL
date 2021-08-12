@@ -12,13 +12,9 @@ class ReplayBuffer:
 
         self.device = args.device
 
-
         self.states = np.empty([buffer_size, n_states], dtype=np.float32)
         self.next_states = np.empty([buffer_size, n_states], dtype=np.float32)
-        if n_actions == 1:
-            self.actions = np.empty([buffer_size],dtype=np.float32)
-        else:
-            self.actions = np.empty([buffer_size, n_actions],dtype=np.float32)
+        self.actions = np.empty([buffer_size],dtype=np.float32)
         self.rewards = np.empty([buffer_size], dtype=np.float32)
         self.masks = np.empty([buffer_size],dtype=np.float32)
 
@@ -54,10 +50,7 @@ class ReplayBuffer:
 
         self.states = np.empty([self.max_size, self.n_states], dtype=np.float32)
         self.next_states = np.empty([self.max_size, self.n_states], dtype=np.float32)
-        if self.n_actions == 1:
-            self.actions = np.empty([self.max_size], dtype=np.float32)
-        else:
-            self.actions = np.empty([self.max_size, self.n_actions], dtype=np.float32)
+        self.actions = np.empty([self.max_size], dtype=np.float32)
         self.rewards = np.empty([self.max_size], dtype=np.float32)
         self.masks = np.empty([self.max_size], dtype=np.float32)
 

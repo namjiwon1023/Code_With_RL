@@ -81,7 +81,7 @@ class D3QNAgent(object):
 
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, self.n_actions)
+            action = T.as_tensor(samples['action'], dtype=T.long, device=self.args.device).reshape(-1, 1)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             next_q = self.target(next_state).gather(1, self.eval(next_state).argmax(dim = 1, keepdim = True))
