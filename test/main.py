@@ -17,22 +17,9 @@ from test.agent import DDPGAgent, TD3Agent, SACAgent, PPOAgent, A2CAgent, BC_SAC
 from test.arguments import get_args
 from test.runner import Runner
 
-# Random Seed Settings
-def _random_seed(seed):
-    if T.backends.cudnn.enabled:
-        T.backends.cudnn.benchmark = False
-        T.backends.cudnn.deterministic = True
-
-    T.manual_seed(seed)
-    T.cuda.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    print('Using GPU : ', T.cuda.is_available() , ' |  Seed : ', seed)
-
 if __name__ == '__main__':
     args = get_args()
     writer = SummaryWriter('./logs/' + args.algorithm)
-    _random_seed(args.seed)
 
     if args.algorithm == 'DQN':
         agent = DQNAgent(args)
@@ -67,12 +54,12 @@ if __name__ == '__main__':
     if args.algorithm == 'BC_SAC':
         agent = BC_SACAgent(args)
 
-    runner = Runner(agent, args, agent.env, writer)
+    runner = Runner(agent, args, writer)
 
     if args.evaluate:
         returns = runner.evaluate()
         print('Average returns is', returns)
-        runner.gif(agent, agent.env)
+        runner.gif(agent)
     else:
         if args.algorithm == 'PPO':
             runner.ppo_run()

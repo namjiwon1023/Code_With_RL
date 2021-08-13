@@ -5,27 +5,28 @@
 
 import numpy as np
 import random
+import torch as T
 
 from test.segment_tree import MinSegmentTree, SumSegmentTree
 
 class ReplayBuffer:
-    def __init__(self, n_states, n_actions, args, buffer_size=None):
+    def __init__(self, n_states, args, buffer_size=None):
         if buffer_size == None:
             buffer_size = args.buffer_size
 
         self.device = args.device
 
-        self.states = np.empty([buffer_size, n_states], dtype=np.float32)
-        self.next_states = np.empty([buffer_size, n_states], dtype=np.float32)
+        self.states = T.empty([buffer_size, n_states], dtype=T.float32, device=self.device)
+        self.next_states = T.empty([buffer_size, n_states], dtype=T.float32, device=self.device)
         # If the dimension of the action exceeds 1 dimension, then self.actions = np.empty([buffer_size, action_dim], dtype=np.float32)
-        self.actions = np.empty([buffer_size],dtype=np.float32)
-        self.rewards = np.empty([buffer_size], dtype=np.float32)
-        self.masks = np.empty([buffer_size],dtype=np.float32)
+        self.actions = T.empty([buffer_size],dtype=T.float32, device=self.device)
+        self.rewards = T.empty([buffer_size], dtype=T.float32, device=self.device)
+        self.masks = T.empty([buffer_size],dtype=T.float32, device=self.device)
 
         self.max_size = buffer_size
         self.ptr, self.cur_len, = 0, 0
         self.n_states = n_states
-        self.n_actions = n_actions
+
 
         self.transitions = []
 
@@ -42,33 +43,21 @@ class ReplayBuffer:
 
     def sample_batch(self, batch_size):
         index = np.random.choice(self.cur_len, batch_size, replace = False)
-
-        return dict(state = self.states[index],
-                    action = self.actions[index],
-                    reward = self.rewards[index],
-                    next_state = self.next_states[index],
-                    mask = self.masks[index],
-                    )
-
-        '''
-        Spinning up style
-        from https://github.com/openai/spinningup
         batch = dict(state = self.states[index],
                     action = self.actions[index],
                     reward = self.rewards[index],
                     next_state = self.next_states[index],
                     mask = self.masks[index],
                     )
-        return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in batch.items()}
-        '''
+        return {k: T.as_tensor(v, dtype=T.float32, device=self.device) for k,v in batch.items()}
 
     def clear(self):
 
-        self.states = np.empty([self.max_size, self.n_states], dtype=np.float32)
-        self.next_states = np.empty([self.max_size, self.n_states], dtype=np.float32)
-        self.actions = np.empty([self.max_size], dtype=np.float32)
-        self.rewards = np.empty([self.max_size], dtype=np.float32)
-        self.masks = np.empty([self.max_size], dtype=np.float32)
+        self.states = T.empty([self.max_size, self.n_states], dtype=T.float32, device=self.device)
+        self.next_states = T.empty([self.max_size, self.n_states], dtype=T.float32, device=self.device)
+        self.actions = T.empty([self.max_size], dtype=T.float32, device=self.device)
+        self.rewards = T.empty([self.max_size], dtype=T.float32, device=self.device)
+        self.masks = T.empty([self.max_size], dtype=T.float32, device=self.device)
 
         self.ptr, self.cur_len, = 0, 0
 
@@ -105,17 +94,22 @@ class ReplayBufferPPO:
         del self.log_probs[:]
 
 class PrioritizedReplayBuffer:
-    def __init__(self, n_states, args, buffer_size, alpha=0.6):
+    def __init__(self, n_states, args, alpha=0.6, buffer_size=None):
         assert alpha >= 0
 
-        self.states = np.empty([buffer_size, n_states], dtype=np.float32)
-        self.next_states = np.empty([buffer_size, n_states], dtype=np.float32)
+        if buffer_size == None:
+            buffer_size = args.buffer_size
+
+        self.device = args.device
+
+        self.states = T.empty([buffer_size, n_states], dtype=T.float32, device=self.device)
+        self.next_states = T.empty([buffer_size, n_states], dtype=T.float32, device=self.device)
 
         # If the dimension of the action exceeds 1 dimension, then self.actions = np.empty([buffer_size, action_dim], dtype=np.float32)
-        self.actions = np.empty([buffer_size], dtype=np.float32)
+        self.actions = T.empty([buffer_size], dtype=T.float32, device=self.device)
 
-        self.rewards = np.empty([buffer_size], dtype=np.float32)
-        self.masks = np.empty([buffer_size], dtype=np.float32)
+        self.rewards = T.empty([buffer_size], dtype=T.float32, device=self.device)
+        self.masks = T.empty([buffer_size], dtype=T.float32, device=self.device)
 
         self.max_size = buffer_size
         self.ptr, self.cur_len, = 0, 0
@@ -155,15 +149,15 @@ class PrioritizedReplayBuffer:
 
         weights = np.array([self._calculate_weight(i, beta) for i in indices])
 
-        return dict(
-                    state=self.states[indices],
+        batch = dict(state=self.states[indices],
                     next_state=self.next_states[indices],
                     action=self.actions[indices],
                     reward=self.rewards[indices],
                     mask=self.masks[indices],
                     weights=weights,
-                    indices=indices,
                     )
+        return {k: T.as_tensor(v, dtype=T.float32, device=self.device) for k,v in batch.items()}, indices
+
 
     def update_priorities(self, indices, priorities):
         """Update priorities of sampled transitions."""

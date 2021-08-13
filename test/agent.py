@@ -6,7 +6,7 @@
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions import Normal, Categorical
+from torch.distributions import Normal
 import numpy as np
 import os
 import copy
@@ -14,67 +14,73 @@ import gym
 from gym.wrappers import RescaleAction
 
 from collections import deque
-from test.network import QNetwork, DuelingNetwork
-from test.network import Actor, ActorA2C, ActorPPO, ActorSAC, CriticQ, CriticV, CriticTwin
-from test.replaybuffer import ReplayBuffer, ReplayBufferPPO
-from test.utils import OUNoise
 
-class DQNAgent(object):
-    def __init__(self, args):
+from test.network import QNetwork, DuelingNetwork, DuelingTwinNetwork
+from test.network import DeterministicPolicy, ActorA2C, ActorPPO, ActorSAC
+from test.network import CriticQ, CriticV, TwinCritic
+
+from test.replaybuffer import ReplayBuffer, ReplayBufferPPO, PrioritizedReplayBuffer
+from test.utils import OUNoise, _target_soft_update, grad_false, _random_seed
+from test.utils import _save_model, _load_model
+from test.utils import compute_gae, ppo_iter
+
+class DQNAgent:
+    def __init__(self, args, env):
 
         self.args = args
 
-        # Environment setting
-        self.env = gym.make(args.env_name)
-        self.n_states = self.env.observation_space.shape[0]
-        self.n_actions = self.env.action_space.n
+        _random_seed(args.seed)
+        self.env = env
+        self.n_states = env.observation_space.shape[0]
+        self.n_actions = env.action_space.n
 
-        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'DQN.pth')
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = QNetwork(self.n_states, self.n_actions, args)
-        self.criterion = nn.MSELoss()
-
         self.target = copy.deepcopy(self.eval)
-        self.target.eval()
-        for p in self.target.parameters():
-            p.requires_grad = False
+        grad_false(self.target)
+
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         # optimizer setting
         self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
 
         # replay buffer
-        self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
+        self.memory = ReplayBuffer(self.n_states, args)
         self.transition = list()
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/DQN.pth'):
-            self.load_models()
 
         self.total_step = 0
 
-    def choose_action(self, state, epsilon):
+    def choose_action(self, state):
         with T.no_grad():
-            if epsilon >= np.random.random() and not self.args.evaluate:
-                choose_action = np.random.randint(0, self.n_actions)
-            else :
-                choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
-                choose_action = choose_action.detach().cpu().numpy()
-
-            if not self.args.evaluate:
-                self.transition = [state, choose_action]
+            choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
+            choose_action = choose_action.detach().cpu().numpy()
+            self.transition = [state, choose_action]
         return choose_action
+
+    def step(self, state, t, is_random):
+        t += 1
+        self.total_step += 1
+
+        if is_random:
+            action = self.env.action_space.sample()
+        else:
+            action = self.choose_action(state)
+
+        next_state, reward, done, _ = self.env.step(action)
+        real_done = False if t >= self.env.spec.max_episode_steps else done
+        mask = 0.0 if real_done else self.args.gamma
+        self.transition += [reward, next_state, mask]
+        self.memory.store(*self.transition)
+        state = next_state
+
+        if done:
+            t = 0
+            state = self.env.reset()
+
+        return t, state
+
 
     def learn(self):
 
@@ -121,7 +127,7 @@ class DQNAgent(object):
 
         return loss
 
-class DoubleDQNAgent(object):
+class DoubleDQNAgent:
     def __init__(self, args):
 
         self.args = args
@@ -131,7 +137,7 @@ class DoubleDQNAgent(object):
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
-        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'DoubleDQN.pth')
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = QNetwork(self.n_states, self.n_actions, args)
@@ -225,7 +231,7 @@ class DoubleDQNAgent(object):
 
         return loss
 
-class DuelingDQNAgent(object):
+class DuelingDQNAgent:
     def __init__(self, args):
 
         self.args = args
@@ -235,7 +241,7 @@ class DuelingDQNAgent(object):
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
-        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'DuelingDQN.pth')
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = DuelingNetwork(self.n_states, self.n_actions, args)
@@ -328,7 +334,7 @@ class DuelingDQNAgent(object):
 
         return loss
 
-class D3QNAgent(object):
+class D3QNAgent:
     def __init__(self, args):
 
         self.args = args
@@ -338,7 +344,7 @@ class D3QNAgent(object):
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
-        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'D3QN.pth')
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = DuelingNetwork(self.n_states, self.n_actions, args)
@@ -434,7 +440,7 @@ class D3QNAgent(object):
 
         return loss
 
-class NoisyDQNAgent(object):
+class NoisyDQNAgent:
     def __init__(self, args):
 
         self.args = args
@@ -444,7 +450,7 @@ class NoisyDQNAgent(object):
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
-        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'NoisyDQN.pth')
+        self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = QNetwork(self.n_states, self.n_actions, args)
@@ -537,11 +543,11 @@ class NoisyDQNAgent(object):
 
         return loss
 
-class DDPGAgent(object):
+class DDPGAgent:
     def __init__(self, args):
         self.args = args
-        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'ddpg_actor.pth')
-        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'ddpg_critic.pth')
+        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
+        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
         # Environment setting
         self.env = gym.make(args.env_name)
@@ -688,11 +694,11 @@ class DDPGAgent(object):
         actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean()
         return actor_loss
 
-class TD3Agent(object):
+class TD3Agent:
     def __init__(self, args):
         self.args = args
-        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'td3_actor.pth')
-        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'td3_critic.pth')
+        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
+        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
         # Environment setting
         self.env = gym.make(args.env_name)
@@ -837,11 +843,11 @@ class TD3Agent(object):
         actor_loss = -self.critic_eval(state, self.actor_eval(state)).mean()
         return actor_loss
 
-class SACAgent(object):
+class SACAgent:
     def __init__(self, args):
         self.args = args
-        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'sac_actor.pth')
-        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'sac_critic.pth')
+        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
+        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
         # Environment setting
         self.env = gym.make(args.env_name)
@@ -1000,11 +1006,11 @@ class SACAgent(object):
         alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
         return alpha_loss
 
-class PPOAgent(object):
+class PPOAgent:
     def __init__(self, args):
         self.args = args
-        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'ppo_actor.pth')
-        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'ppo_critic.pth')
+        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
+        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
         # Environment setting
         self.env = gym.make(args.env_name)
@@ -1144,11 +1150,11 @@ class PPOAgent(object):
         _load_model(self.actor, self.actor_path)
         _load_model(self.critic, self.critic_path)
 
-class A2CAgent(object):
+class A2CAgent:
     def __init__(self, args):
         self.args = args
-        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'a2c_actor.pth')
-        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'a2c_critic.pth')
+        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
+        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
         # Environment setting
         self.env = gym.make(args.env_name)
@@ -1244,11 +1250,11 @@ class A2CAgent(object):
         actor_loss += entropy_weight * -log_prob  # entropy maximization
         return actor_loss
 
-class BC_SACAgent(object):
+class BC_SACAgent:
     def __init__(self, args):
         self.args = args
-        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'sac_actor.pth')
-        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, 'sac_critic.pth')
+        self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
+        self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
         # Environment setting
         self.env = gym.make(args.env_name)
@@ -1441,32 +1447,3 @@ class BC_SACAgent(object):
             ).pow(2).sum() / n_qf_mask
 
         return bc_loss
-
-# generalized advantage estimator
-def compute_gae(next_value, rewards, masks, values, gamma = 0.99, tau = 0.95,):
-    values = values + [next_value]
-    gae = 0
-    returns = deque()
-
-    for step in reversed(range(len(rewards))):
-        delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
-        gae = delta + gamma * tau * masks[step] * gae
-        returns.appendleft(gae + values[step])
-
-    return list(returns)
-
-# Proximal Policy Optimization
-def ppo_iter(epoch, mini_batch_size, states, actions, values, log_probs, returns, advantages,):
-    batch_size = states.size(0)
-    for _ in range(epoch):
-        for _ in range(batch_size // mini_batch_size):
-            rand_ids = np.random.choice(batch_size, mini_batch_size)
-            yield states[rand_ids, :], actions[rand_ids, :], values[rand_ids, :], log_probs[rand_ids, :], returns[rand_ids, :], advantages[rand_ids, :]
-
-# model save functions
-def _save_model(net, dirpath):
-    T.save(net.state_dict(), dirpath)
-
-# model load functions
-def _load_model(net, dirpath):
-    net.load_state_dict(T.load(dirpath))

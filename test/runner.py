@@ -8,16 +8,40 @@ from test.utils import _make_gif, _evaluate_agent, _store_expert_data
 import torch as T
 
 class Runner:
-    def __init__(self, agent, args, env, writer):
+    def __init__(self, agent, args, writer):
         self.args = args
         if self.args.use_epsilon:
             self.epsilon = args.epsilon
         else:
             self.epsilon = None
         self.episode_limit = env.spec.max_episode_steps
-        self.env = env
+
+        self.env = gym.make(args.env_name)
+        self.env.seed(args.seed)
+
+        self.env_test = gym.make(args.env_name)
+        self.env_test.seed(2 ** 31 - args.seed)
+
         self.agent = agent
         self.writer = writer
+
+        # Storage location creation
+        if not os.path.exists(self.args.save_dir):
+            os.mkdir(self.args.save_dir)
+
+        self.model_path = self.args.save_dir + '/' + args.algorithm
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+
+        self.model_path = self.model_path + '/' + args.env_name
+        if not os.path.exists(self.model_path):
+            os.mkdir(self.model_path)
+        if args.is_discrete:
+            if os.path.exists(self.model_path + '/' + self.args.algorithm_path):
+                self.agent.load_models()
+        else:
+            if os.path.exists(self.model_path + '/' + self.args.file_actor):
+                self.agent.load_models()
 
     def run(self):
         best_score = self.env.reward_range[0]
@@ -192,5 +216,5 @@ class Runner:
             returns = _store_expert_data(self.env, self.agent, self.args, n_starts=1000)
         return returns
 
-    def gif(self, policy, env, maxsteps=1000):
-        _make_gif(policy, env, self.args, maxsteps)
+    def gif(self, policy, maxsteps=1000):
+        _make_gif(policy, self.env, self.args, maxsteps)

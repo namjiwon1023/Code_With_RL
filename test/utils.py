@@ -13,6 +13,7 @@ import copy
 import torch as T
 import torch.nn as nn
 import math
+from collections import deque
 
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
@@ -139,13 +140,12 @@ class OUNoise:
         return self.state
 
 def _target_soft_update(target, eval, tau):
-    with T.no_grad():
-        for t_p, l_p in zip(target.parameters(), eval.parameters()):
-            t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
+    for t_p, l_p in zip(target.parameters(), eval.parameters()):
+        t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
 
-def _target_net_update(target, eval):
-    with T.no_grad():
-        target.load_state_dict(eval.state_dict())
+def grad_false(network):
+    for param in network.parameters():
+        param.requires_grad = False
 
 def build_mlp(
     input_dim,
@@ -196,3 +196,37 @@ def initialize_weight(m, std=1.0, bias_const=1e-6):
 
 def conv2d_size_out(size, kernel_size, stride, padding):
     return ((size + 2 * padding - kernel_size) // stride) + 1
+
+def _random_seed(seed):
+    np.random.seed(seed)
+    T.manual_seed(seed)
+    T.cuda.manual_seed(seed)
+
+# model save functions
+def _save_model(net, dirpath):
+    T.save(net.state_dict(), dirpath)
+
+# model load functions
+def _load_model(net, dirpath):
+    net.load_state_dict(T.load(dirpath))
+
+# generalized advantage estimator
+def compute_gae(next_value, rewards, masks, values, gamma = 0.99, tau = 0.95,):
+    values = values + [next_value]
+    gae = 0
+    returns = deque()
+
+    for step in reversed(range(len(rewards))):
+        delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
+        gae = delta + gamma * tau * masks[step] * gae
+        returns.appendleft(gae + values[step])
+
+    return list(returns)
+
+# Proximal Policy Optimization
+def ppo_iter(epoch, mini_batch_size, states, actions, values, log_probs, returns, advantages,):
+    batch_size = states.size(0)
+    for _ in range(epoch):
+        for _ in range(batch_size // mini_batch_size):
+            rand_ids = np.random.choice(batch_size, mini_batch_size)
+            yield states[rand_ids, :], actions[rand_ids, :], values[rand_ids, :], log_probs[rand_ids, :], returns[rand_ids, :], advantages[rand_ids, :]

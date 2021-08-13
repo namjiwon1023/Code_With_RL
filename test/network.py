@@ -6,11 +6,12 @@
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Normal, Categorical
 import os
 import numpy as np
 import math
 import random
-from test.utils import build_mlp, reparameterize, initialize_weight
+from test.utils import build_mlp, initialize_weight
 
 class QNetwork(nn.Module):
     def __init__(self, n_states, n_actions, args):
@@ -229,6 +230,10 @@ class ActorA2C(nn.Module): # Advantage Actor-Critic
         self.to(self.device)
 
     def forward(self, state):
+        mu = T.chunk(self.net(state), 2, dim=-1)[0]
+        return T.tanh(mu) * 2
+
+    def sample(self, state):
         mu, log_std = T.chunk(self.net(state), 2, dim=-1)
         mu = T.tanh(mu) * 2
         log_std = F.softplus(log_std)
@@ -254,6 +259,9 @@ class ActorPPO(nn.Module): # Proximal Policy Optimization
         self.to(self.device)
 
     def forward(self, state):
+        return self.mu(state)
+
+    def sample(self, state):
         mu = self.mu(state)
         std = T.exp(self.log_std).expand_as(mu)
 
@@ -279,14 +287,24 @@ class ActorSAC(nn.Module): # Soft Actor-Critic
 
     def forward(self, state):
         mu = T.chunk(self.net(state), 2, dim=-1)[0]
-        if self.max_action == None: return T.tanh(mu)
-        return self.max_action*T.tanh(mu)
+        if self.max_action == None: return mu.tanh()
+        return self.max_action*mu.tanh()
 
     def sample(self, state):
         mu, log_std = T.chunk(self.net(state), 2, dim=-1)
-        action, log_pi = reparameterize(mu, log_std.clamp_(self.min_log_std, self.max_log_std))
-        if self.max_action == None: return action, log_pi
-        return self.max_action*action, log_pi
+
+        std = T.exp(log_std.clamp_(self.min_log_std, self.max_log_std))
+
+        dist = Normal(mu, std)
+        z = dist.rsample()
+
+        action = z.tanh()
+
+        log_prob = dist.log_prob(z) - T.log(1 - action.pow(2) + 1e-7)
+        log_prob = log_prob.sum(-1, keepdim=True)
+
+        if self.max_action == None: return action, log_prob
+        return self.max_action*action, log_prob
 
 class CriticQ(nn.Module): # Action Value Function
     def __init__(self, n_states, n_actions, args):
