@@ -31,9 +31,7 @@ def dqn_parameters():
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
-    parser.add_argument("--max_epsilon", type=float, default=1.0, help="max epsilon")
-    parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
-    parser.add_argument("--epsilon_decay", type=float, default=0.0005, help="epsilon decay")
+    parser.add_argument("--epsilon", type=float, default=0.1, help="min epsilon")
 
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
 
@@ -47,6 +45,7 @@ def dqn_parameters():
 
     parser.add_argument("--evaluate-episodes", type=int, default=10, help="number of episodes for evaluating")
     parser.add_argument("--evaluate-rate", type=int, default=1000, help="how often to evaluate model")
+    parser.add_argument("--evaluate", type=bool, default=False, help="whether to evaluate the model")
 
     return parser.parse_args()
 
@@ -73,9 +72,7 @@ def double_dqn_parameters():
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
-    parser.add_argument("--max_epsilon", type=float, default=1.0, help="max epsilon")
-    parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
-    parser.add_argument("--epsilon_decay", type=float, default=0.0005, help="epsilon decay")
+    parser.add_argument("--epsilon", type=float, default=0.25, help="min epsilon")
 
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
 
@@ -116,9 +113,7 @@ def dueling_dqn_parameters():
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
-    parser.add_argument("--max_epsilon", type=float, default=1.0, help="max epsilon")
-    parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
-    parser.add_argument("--epsilon_decay", type=float, default=0.0005, help="epsilon decay")
+    parser.add_argument("--epsilon", type=float, default=0.25, help="min epsilon")
 
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
 
@@ -159,9 +154,7 @@ def d3qn_parameters():
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
-    parser.add_argument("--max_epsilon", type=float, default=1.0, help="max epsilon")
-    parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
-    parser.add_argument("--epsilon_decay", type=float, default=0.0005, help="epsilon decay")
+    parser.add_argument("--epsilon", type=float, default=0.1, help="min epsilon")
 
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
 
@@ -353,6 +346,8 @@ def sac_parameters():
 
     parser.add_argument("--buffer_size", type=int, default=100000, help="number of transitions can be stored in buffer")
     parser.add_argument("--batch_size", type=int, default=256, help="number of episodes to optimize at the same time")
+
+    parser.add_argument("--with_logprob", type=bool, default=True)
 
     parser.add_argument("--evaluate-episodes", type=int, default=10, help="number of episodes for evaluating")
     parser.add_argument("--evaluate", type=bool, default=False, help="whether to evaluate the model")

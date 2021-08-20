@@ -14,6 +14,8 @@ import torch as T
 import torch.nn as nn
 import math
 from collections import deque
+import torch as T
+import torch.nn as nn
 
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
@@ -76,6 +78,27 @@ def _evaluate_agent(env, agent, args, n_starts=10):
             reward_sum += reward
             state = next_state
     return reward_sum / n_starts
+
+def _random_exploration(env, agent, args, exploration_steps):
+    episode_limit = env.spec.max_episode_steps
+    if_discrete = env.if_discrete
+    action_dim = env.action_dim
+    step = 0
+    while step < exploration_steps:
+        cur_episode_steps = 0
+        done = False
+        state = env.reset()
+        while (not done):
+            agent.total_step += 1
+            cur_episode_steps += 1
+            step += 1
+            action = np.random.randint(action_dim) if if_discrete else np.random.uniform(-1, 1, size=action_dim)
+            next_state, reward, done, _ = env.step(action)
+            real_done = False if cur_episode_steps >= episode_limit else done
+            mask = 0.0 if real_done else self.args.gamma
+            agent.memory.store(state, action, reward, next_state, mask)
+            state = next_state
+    return step
 
 def _store_expert_data(env, agent, args, n_starts=1000):
     episode_limit = env.spec.max_episode_steps
@@ -143,17 +166,11 @@ def _target_soft_update(target, eval, tau):
     for t_p, l_p in zip(target.parameters(), eval.parameters()):
         t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
 
-def grad_false(network):
+def _grad_false(network):
     for param in network.parameters():
         param.requires_grad = False
 
-def build_mlp(
-    input_dim,
-    output_dim,
-    hidden_units=[128, 128],
-    hidden_activation=nn.ReLU(),
-    output_activation=None,
-):
+def build_mlp(input_dim, output_dim, hidden_units=[128, 128], hidden_activation=nn.ReLU(), output_activation=None,):
     layers = []
     units = input_dim
     for next_units in hidden_units:
@@ -197,19 +214,6 @@ def initialize_weight(m, std=1.0, bias_const=1e-6):
 def conv2d_size_out(size, kernel_size, stride, padding):
     return ((size + 2 * padding - kernel_size) // stride) + 1
 
-def _random_seed(seed):
-    np.random.seed(seed)
-    T.manual_seed(seed)
-    T.cuda.manual_seed(seed)
-
-# model save functions
-def _save_model(net, dirpath):
-    T.save(net.state_dict(), dirpath)
-
-# model load functions
-def _load_model(net, dirpath):
-    net.load_state_dict(T.load(dirpath))
-
 # generalized advantage estimator
 def compute_gae(next_value, rewards, masks, values, gamma = 0.99, tau = 0.95,):
     values = values + [next_value]
@@ -230,3 +234,17 @@ def ppo_iter(epoch, mini_batch_size, states, actions, values, log_probs, returns
         for _ in range(batch_size // mini_batch_size):
             rand_ids = np.random.choice(batch_size, mini_batch_size)
             yield states[rand_ids, :], actions[rand_ids, :], values[rand_ids, :], log_probs[rand_ids, :], returns[rand_ids, :], advantages[rand_ids, :]
+
+# model save functions
+def _save_model(net, dirpath):
+    T.save(net.state_dict(), dirpath)
+
+# model load functions
+def _load_model(net, dirpath):
+    net.load_state_dict(T.load(dirpath))
+
+# Random Seed Settings
+def _random_seed(seed):
+    T.manual_seed(seed)
+    T.cuda.manual_seed(seed)
+    np.random.seed(seed)

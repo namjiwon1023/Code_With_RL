@@ -13,88 +13,97 @@ import copy
 import gym
 from gym.wrappers import RescaleAction
 
-from collections import deque
-
 from test.network import QNetwork, DuelingNetwork, DuelingTwinNetwork
 from test.network import DeterministicPolicy, ActorA2C, ActorPPO, ActorSAC
-from test.network import CriticQ, CriticV, TwinCritic
-
+from test.network import CriticQ, CriticV, CriticTwin
 from test.replaybuffer import ReplayBuffer, ReplayBufferPPO, PrioritizedReplayBuffer
-from test.utils import OUNoise, _target_soft_update, grad_false, _random_seed
-from test.utils import _save_model, _load_model
-from test.utils import compute_gae, ppo_iter
+from test.utils import OUNoise, _target_soft_update, _grad_false, compute_gae, ppo_iter
+from test.utils import _save_model, _load_model, _random_seed
+
 
 class DQNAgent:
-    def __init__(self, args, env):
+    def __init__(self, args, if_per=False):
 
         self.args = args
 
+        # random seed settings
         _random_seed(args.seed)
-        self.env = env
-        self.n_states = env.observation_space.shape[0]
-        self.n_actions = env.action_space.n
 
+        self.state = None
+        self.critic_update_function = None
+
+        # Environment setting
+        self.env = gym.make(args.env_name)
+        self.n_states = self.env.observation_space.shape[0]
+        self.n_actions = self.env.action_space.n
+
+        # The location where the model is stored
         self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = QNetwork(self.n_states, self.n_actions, args)
         self.target = copy.deepcopy(self.eval)
-        grad_false(self.target)
-
-        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
+        _grad_false(self.target)
 
         # optimizer setting
         self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         # replay buffer
-        self.memory = ReplayBuffer(self.n_states, args)
+        self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
         self.transition = list()
 
         self.total_step = 0
+        self.dqn_update_steps = 0
 
-    def choose_action(self, state):
+    def choose_action(self, state, epsilon):
         with T.no_grad():
-            choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
-            choose_action = choose_action.detach().cpu().numpy()
-            self.transition = [state, choose_action]
+            if self.args.epsilon >= np.random.random() and not self.args.evaluate:
+                choose_action = np.random.randint(0, self.n_actions)
+            else :
+                choose_action = self.eval(T.as_tensor(state, dtype=T.float32, device=self.args.device)).argmax()
+                choose_action = choose_action.detach().cpu().numpy()
         return choose_action
 
-    def step(self, state, t, is_random):
-        t += 1
-        self.total_step += 1
+    def explore_env(self, env, buffer, target_step):
+        episode_limit = env.spec.max_episode_steps
+        for i in range(target_step):
+            cur_episode_steps = 0
+            done = False
+            while (not done):
+                self.total_step += 1
+                i += 1
+                cur_episode_steps += 1
+                action = self.choose_action(self.state)
+                next_state, reward, done, _ = env.step(action)
 
-        if is_random:
-            action = self.env.action_space.sample()
-        else:
-            action = self.choose_action(state)
+                real_done = False if cur_episode_steps >= episode_limit else done
+                mask = 0.0 if real_done else self.args.gamma
+                buffer.store(self.state, action, reward, next_state, mask)
+                self.state = next_state
+            self.state = env.reset()
+        return target_step
 
-        next_state, reward, done, _ = self.env.step(action)
-        real_done = False if t >= self.env.spec.max_episode_steps else done
-        mask = 0.0 if real_done else self.args.gamma
-        self.transition += [reward, next_state, mask]
-        self.memory.store(*self.transition)
-        state = next_state
+    def learn(self, target_step, repeat_times, writer):
+        if not self.memory.ready(self.args.batch_size):
+            return
+        for i in range(int(target_step * repeat_times)):
+            self.dqn_update_steps += 1
 
-        if done:
-            t = 0
-            state = self.env.reset()
+            # TD error
+            critic_loss = self._value_update(self.memory, self.args.batch_size)
 
-        return t, state
+            # update value
+            self.optimizer.zero_grad()
+            critic_loss.backward()
+            self.optimizer.step()
 
+            if self.dqn_update_steps % 1000 == 0:
+                writer.add_scalar("loss/critic", critic_loss.item(), self.dqn_update_steps)
 
-    def learn(self):
-
-        # TD error
-        critic_loss = self._value_update(self.memory, self.args.batch_size)
-
-        # update value
-        self.optimizer.zero_grad()
-        critic_loss.backward()
-        self.optimizer.step()
-
-        # target network hard update
-        if self.total_step % self.args.update_rate == 0:
-            self._target_net_update(self.target, self.eval)
+            # target network hard update
+            if self.total_step % self.args.update_rate == 0:
+                _target_soft_update(self.target, self.eval, 1.0)
 
     def save_models(self):
         print('------ Save model ------')
@@ -103,10 +112,6 @@ class DQNAgent:
     def load_models(self):
         print('------ load model ------')
         _load_model(self.eval, self.checkpoint)
-
-    # target network hard update
-    def _target_net_update(self, target_net, eval_net):
-        target_net.load_state_dict(eval_net.state_dict())
 
     def _value_update(self, buffer, batch_size):
         with T.no_grad():
@@ -128,47 +133,33 @@ class DQNAgent:
         return loss
 
 class DoubleDQNAgent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
 
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
 
         # Environment setting
         self.env = gym.make(args.env_name)
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
+        # The location where the model is stored
         self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = QNetwork(self.n_states, self.n_actions, args)
-        self.criterion = nn.MSELoss()
-
         self.target = copy.deepcopy(self.eval)
-        self.target.eval()
-        for p in self.target.parameters():
-            p.requires_grad = False
+        _grad_false(self.target)
 
         # optimizer setting
         self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
-
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
         # replay buffer
         self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
         self.transition = list()
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/DoubleDQN.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -232,49 +223,34 @@ class DoubleDQNAgent:
         return loss
 
 class DuelingDQNAgent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
 
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
 
         # Environment setting
         self.env = gym.make(args.env_name)
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
+        # The location where the model is stored
         self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
-
         # network setting
         self.eval = DuelingNetwork(self.n_states, self.n_actions, args)
-
-        # loss function
-        self.criterion = nn.MSELoss()
-
         self.target = copy.deepcopy(self.eval)
-        self.target.eval()
-        for p in self.target.parameters():
-            p.requires_grad = False
+        _grad_false(self.target)
 
         # optimizer setting
         self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
+        # loss function
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         # replay buffer
         self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
         self.transition = list()
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/DuelingDQN.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -335,49 +311,35 @@ class DuelingDQNAgent:
         return loss
 
 class D3QNAgent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
 
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
 
         # Environment setting
         self.env = gym.make(args.env_name)
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
+        # The location where the model is stored
         self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = DuelingNetwork(self.n_states, self.n_actions, args)
-
-        # loss function
-        self.criterion = nn.MSELoss()
-
         self.target = copy.deepcopy(self.eval)
-        self.target.eval()
-        for p in self.target.parameters():
-            p.requires_grad = False
+        _grad_false(self.target)
 
         # optimizer setting
         self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
+        # loss function
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         # replay buffer
         self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
         self.transition = list()
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/D3QN.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -441,49 +403,34 @@ class D3QNAgent:
         return loss
 
 class NoisyDQNAgent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
 
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
 
         # Environment setting
         self.env = gym.make(args.env_name)
         self.n_states = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.n
 
+        # The location where the model is stored
         self.checkpoint = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.algorithm_path)
 
         # network setting
         self.eval = QNetwork(self.n_states, self.n_actions, args)
-
-        # loss function
-        self.criterion = nn.MSELoss()
-
         self.target = copy.deepcopy(self.eval)
-        self.target.eval()
-        for p in self.target.parameters():
-            p.requires_grad = False
+        _grad_false(self.target)
 
         # optimizer setting
         self.optimizer = optim.Adam(self.eval.parameters(), lr=self.args.critic_lr)
-
+        # loss function
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
         # replay buffer
         self.memory = ReplayBuffer(self.n_states, self.n_actions, args)
         self.transition = list()
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/NoisyDQN.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -544,8 +491,14 @@ class NoisyDQNAgent:
         return loss
 
 class DDPGAgent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
+
+        # The location where the model is stored
         self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
         self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
@@ -574,32 +527,12 @@ class DDPGAgent:
         self.critic_optimizer = optim.Adam(self.critic_eval.parameters(), lr=self.args.critic_lr)
 
         # loss function
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         self.actor_target = copy.deepcopy(self.actor_eval)
-        self.actor_target.eval()
-        for p in self.actor_target.parameters():
-            p.requires_grad = False
-
+        _grad_false(self.actor_target)
         self.critic_target = copy.deepcopy(self.critic_eval)
-        self.critic_target.eval()
-        for p in self.critic_target.parameters():
-            p.requires_grad = False
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/ddpg_actor.pth'):
-            self.load_models()
+        _grad_false(self.critic_target)
 
         self.total_step = 0
 
@@ -695,8 +628,13 @@ class DDPGAgent:
         return actor_loss
 
 class TD3Agent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
+        # The location where the model is stored
         self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
         self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
@@ -718,36 +656,16 @@ class TD3Agent:
         self.critic_eval = CriticTwin(self.n_states, self.n_actions, self.args)
 
         # loss function
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         # optimizer setting
         self.actor_optimizer = optim.Adam(self.actor_eval.parameters(), lr=self.args.actor_lr)
         self.critic_optimizer = optim.Adam(self.critic_eval.parameters(), lr=self.args.critic_lr)
 
         self.actor_target = copy.deepcopy(self.actor_eval)
-        self.actor_target.eval()
-        for p in self.actor_target.parameters():
-            p.requires_grad = False
-
+        _grad_false(self.actor_target)
         self.critic_target = copy.deepcopy(self.critic_eval)
-        self.critic_target.eval()
-        for p in self.critic_target.parameters():
-            p.requires_grad = False
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/td3_actor.pth'):
-            self.load_models()
+        _grad_false(self.critic_target)
 
         self.total_step = 0
 
@@ -844,8 +762,13 @@ class TD3Agent:
         return actor_loss
 
 class SACAgent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
+        # The location where the model is stored
         self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
         self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
@@ -865,39 +788,20 @@ class SACAgent:
         # actor-critic net setting
         self.actor = ActorSAC(self.n_states, self.n_actions, self.args)
         self.critic_eval = CriticTwin(self.n_states, self.n_actions, self.args)
-
-        # loss function
-        self.criterion = nn.MSELoss()
+        self.critic_target = copy.deepcopy(self.critic_eval)
+        _grad_false(self.critic_target)
 
         # optimizer setting
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.args.actor_lr)
         self.critic_optimizer = optim.Adam(self.critic_eval.parameters(), lr=self.args.critic_lr)
-
-        self.critic_target = copy.deepcopy(self.critic_eval)
-        self.critic_target.eval()
-        for p in self.critic_target.parameters():
-            p.requires_grad = False
+        # loss function
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         # Temperature Coefficient
         self.target_entropy = -self.n_actions
         self.log_alpha = T.zeros(1, requires_grad=True, device=self.args.device)
         self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.args.alpha_lr)
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/sac_actor.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -1009,6 +913,7 @@ class SACAgent:
 class PPOAgent:
     def __init__(self, args):
         self.args = args
+        # The location where the model is stored
         self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
         self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
@@ -1031,22 +936,6 @@ class PPOAgent:
         # optimizer setting
         self.optimizer = optim.Adam([{'params': self.actor.parameters(), 'lr': self.args.actor_lr},
                                     {'params': self.critic.parameters(), 'lr': self.args.critic_lr}])
-
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/ppo_actor.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -1153,9 +1042,12 @@ class PPOAgent:
 class A2CAgent:
     def __init__(self, args):
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        # The location where the model is stored
         self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
         self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
-
         # Environment setting
         self.env = gym.make(args.env_name)
 
@@ -1177,21 +1069,6 @@ class A2CAgent:
         # optimizer setting
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.args.actor_lr)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.args.critic_lr)
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/a2c_actor.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -1251,8 +1128,14 @@ class A2CAgent:
         return actor_loss
 
 class BC_SACAgent:
-    def __init__(self, args):
+    def __init__(self, args, if_per=False):
         self.args = args
+        _random_seed(args.seed)
+
+        self.state = None
+        self.critic_update_function = None
+
+        # The location where the model is stored
         self.actor_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_actor)
         self.critic_path = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic)
 
@@ -1272,39 +1155,21 @@ class BC_SACAgent:
         # actor-critic network setting
         self.actor = ActorSAC(self.n_states, self.n_actions, self.args)
         self.critic_eval = CriticTwin(self.n_states, self.n_actions, self.args)
-
-        # loss function
-        self.criterion = nn.MSELoss()
+        self.critic_target = copy.deepcopy(self.critic_eval)
+        _grad_false(self.critic_target)
 
         # optimizer setting
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.args.actor_lr)
         self.critic_optimizer = optim.Adam(self.critic_eval.parameters(), lr=self.args.critic_lr)
 
-        self.critic_target = copy.deepcopy(self.critic_eval)
-        self.critic_target.eval()
-        for p in self.critic_target.parameters():
-            p.requires_grad = False
+        # loss function
+        self.criterion = nn.MSELoss(reduction='none' if if_per else 'mean')
 
         # Temperature Coefficient
         self.target_entropy = -self.n_actions
         self.log_alpha = T.zeros(1, requires_grad=True, device=self.args.device)
         self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.args.alpha_lr)
-
-        # Storage location creation
-        if not os.path.exists(self.args.save_dir):
-            os.mkdir(self.args.save_dir)
-
-        self.model_path = self.args.save_dir + '/' + args.algorithm
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        self.model_path = self.model_path + '/' + args.env_name
-        if not os.path.exists(self.model_path):
-            os.mkdir(self.model_path)
-
-        if os.path.exists(self.model_path + '/sac_actor.pth'):
-            self.load_models()
 
         self.total_step = 0
 
@@ -1447,3 +1312,4 @@ class BC_SACAgent:
             ).pow(2).sum() / n_qf_mask
 
         return bc_loss
+

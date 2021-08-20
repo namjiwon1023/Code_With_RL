@@ -8,20 +8,14 @@ from test.utils import _make_gif, _evaluate_agent, _store_expert_data
 import torch as T
 
 class Runner:
-    def __init__(self, agent, args, writer):
+    def __init__(self, agent, args, env, writer):
         self.args = args
         if self.args.use_epsilon:
             self.epsilon = args.epsilon
         else:
             self.epsilon = None
         self.episode_limit = env.spec.max_episode_steps
-
-        self.env = gym.make(args.env_name)
-        self.env.seed(args.seed)
-
-        self.env_test = gym.make(args.env_name)
-        self.env_test.seed(2 ** 31 - args.seed)
-
+        self.env = env
         self.agent = agent
         self.writer = writer
 
@@ -216,5 +210,5 @@ class Runner:
             returns = _store_expert_data(self.env, self.agent, self.args, n_starts=1000)
         return returns
 
-    def gif(self, policy, maxsteps=1000):
-        _make_gif(policy, self.env, self.args, maxsteps)
+    def gif(self, policy, env, maxsteps=1000):
+        _make_gif(policy, env, self.args, maxsteps)
