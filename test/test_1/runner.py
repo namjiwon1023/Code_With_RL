@@ -37,7 +37,6 @@ class Runner:
             if os.path.exists(self.model_path + '/' + self.args.file_actor):
                 self.agent.load_models()
 
-
     def run(self):
         best_score = self.env.reward_range[0]
 
@@ -74,28 +73,34 @@ class Runner:
                 score += reward
 
                 if self.args.is_off_policy:
-                    if self.if_per:
-                        fraction = min(self.agent.total_step / self.args.time_steps, 1.0)
-                        self.args.beta = self.args.beta + fraction * (1.0 - self.args.beta)
-                    self.agent.learn(self.writer)
-                    n_updates += 1
-                    if self.args.use_epsilon:
-                        self.epsilon = max(0.1, self.epsilon - self.args.epsilon_decay)
-                    else:
-                        self.epsilon = None
+                    if self.agent.memory.ready(self.args.batch_size):
+                        self.agent.learn()
+                        n_updates += 1
+                        if self.args.use_epsilon:
+                            self.epsilon = max(0.1, self.epsilon - self.args.epsilon_decay)
+                        else:
+                            self.epsilon = None
 
                     if self.agent.total_step % self.args.evaluate_rate == 0 and self.agent.memory.ready(self.args.batch_size):
+                        running_reward = np.mean(scores[-10:])
                         eval_reward = _evaluate_agent(self.env, self.agent, self.args, n_starts=self.args.evaluate_episodes)
                         eval_rewards.append(eval_reward)
+                        self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
+                        self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)
                         print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, round(score, 2), round(eval_reward, 2), round(avg_score, 2)))
+                        scores = []
                 else:
-                    self.agent.learn(self.writer)
+                    self.agent.learn()
                     n_updates += 1
 
                     if self.agent.total_step % self.args.evaluate_rate == 0:
+                        running_reward = np.mean(scores[-10:])
                         eval_reward = _evaluate_agent(self.env, self.agent, self.args, n_starts=self.args.evaluate_episodes)
                         eval_rewards.append(eval_reward)
+                        self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
+                        self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)
                         print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, round(score, 2), round(eval_reward, 2), round(avg_score, 2)))
+                        scores = []
 
             scores.append(score)
             store_scores.append(score)
@@ -154,14 +159,24 @@ class Runner:
                     self.agent.memory.masks.append(T.as_tensor((1. - float(real_done)), dtype=T.float32, device=self.args.device))
 
                 if steps % self.args.update_step == 0:
-                    self.agent.learn(next_state, self.writer)
+                    self.agent.learn(next_state)
                     steps = 0
                     n_updates += 1
 
                 state = next_state
                 score += reward
+
+                # if self.agent.total_step % self.args.evaluate_rate == 0 and n_updates > 0:
+                #     running_reward = np.mean(scores[-10:])
+                #     eval_reward = _evaluate_agent(self.env, self.agent, self.args, n_starts=self.args.evaluate_episodes)
+                #     eval_rewards.append(eval_reward)
+                #     self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
+                #     self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)
+                #     print('| Episode : {} | Score : {} | Predict Score : {} | Avg score : {} |'.format(i, round(score, 2), round(eval_reward, 2), round(avg_score, 2)))
+                #     scores = []
                 if done:
                     break
+
 
             scores.append(score)
             store_scores.append(score)
@@ -186,6 +201,7 @@ class Runner:
             print('Episode : {} | Score : {} | Avg score : {} | Time_Step : {} |  update number : {} |'.format(i, round(score, 2), round(avg_score, 2), self.agent.total_step, n_updates))
 
         self.agent.env.close()
+
 
     def evaluate(self):
         if not self.args.is_store_transition:

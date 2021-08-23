@@ -14,6 +14,8 @@ import torch as T
 import torch.nn as nn
 import math
 from collections import deque
+import torch as T
+import torch.nn as nn
 
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
@@ -76,6 +78,27 @@ def _evaluate_agent(env, agent, args, n_starts=10):
             reward_sum += reward
             state = next_state
     return reward_sum / n_starts
+
+def _random_exploration(env, agent, args, exploration_steps):
+    episode_limit = env.spec.max_episode_steps
+    if_discrete = env.if_discrete
+    action_dim = env.action_dim
+    step = 0
+    while step < exploration_steps:
+        cur_episode_steps = 0
+        done = False
+        state = env.reset()
+        while (not done):
+            agent.total_step += 1
+            cur_episode_steps += 1
+            step += 1
+            action = np.random.randint(action_dim) if if_discrete else np.random.uniform(-1, 1, size=action_dim)
+            next_state, reward, done, _ = env.step(action)
+            real_done = False if cur_episode_steps >= episode_limit else done
+            mask = 0.0 if real_done else self.args.gamma
+            agent.memory.store(state, action, reward, next_state, mask)
+            state = next_state
+    return step
 
 def _store_expert_data(env, agent, args, n_starts=1000):
     episode_limit = env.spec.max_episode_steps
@@ -187,33 +210,6 @@ def initialize_weight(m, std=1.0, bias_const=1e-6):
         nn.init.xavier_uniform_(m.weight, gain=1.0)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
-
-# code from https://github.com/denisyarats/pytorch_sac_ae/blob/master/sac_ae.py
-def weight_init(m):
-    """Custom weight init for Conv2D and Linear layers."""
-    if isinstance(m, nn.Linear):
-        nn.init.orthogonal_(m.weight.data)
-        m.bias.data.fill_(0.0)
-    elif isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-        # delta-orthogonal init from https://arxiv.org/pdf/1806.05393.pdf
-        assert m.weight.size(2) == m.weight.size(3)
-        m.weight.data.fill_(0.0)
-        m.bias.data.fill_(0.0)
-        mid = m.weight.size(2) // 2
-        gain = nn.init.calculate_gain('relu')
-        nn.init.orthogonal_(m.weight.data[:, :, mid, mid], gain)
-
-def reset_parameters(Sequential, std=1.0, bias_const=1e-6):
-    for layer in Sequential:
-        if isinstance(layer, nn.Linear):
-            nn.init.orthogonal_(layer.weight, std)
-            nn.init.constant_(layer.bias, bias_const)
-
-def reset_single_layer_parameters(layer, std=1.0, bias_const=1e-6):
-    if isinstance(layer, nn.Linear):
-        nn.init.orthogonal_(layer.weight, std)
-        nn.init.constant_(layer.bias, bias_const)
-
 
 def conv2d_size_out(size, kernel_size, stride, padding):
     return ((size + 2 * padding - kernel_size) // stride) + 1

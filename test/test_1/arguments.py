@@ -20,12 +20,6 @@ def dqn_parameters():
     parser.add_argument("--use_noisy_layer", type=bool, default=False)
     parser.add_argument("--is_off_policy", type=bool, default=True)
 
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument("--beta", type=float, default=0.6)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
-
     parser.add_argument("--env-name", type=str, default="CartPole-v0")
     parser.add_argument("--render", type=bool, default=False)
 
@@ -33,8 +27,7 @@ def dqn_parameters():
 
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
@@ -67,11 +60,6 @@ def double_dqn_parameters():
     parser.add_argument("--is_discrete", type=bool, default=True)
     parser.add_argument("--use_noisy_layer", type=bool, default=False)
     parser.add_argument("--is_off_policy", type=bool, default=True)
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument("--beta", type=float, default=0.6)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
 
     parser.add_argument("--env-name", type=str, default="CartPole-v0")
     parser.add_argument("--render", type=bool, default=False, help="")
@@ -80,8 +68,7 @@ def double_dqn_parameters():
 
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
@@ -114,11 +101,6 @@ def dueling_dqn_parameters():
     parser.add_argument("--is_discrete", type=bool, default=True)
     parser.add_argument("--use_noisy_layer", type=bool, default=False)
     parser.add_argument("--is_off_policy", type=bool, default=True)
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument("--beta", type=float, default=0.6)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
 
     parser.add_argument("--env-name", type=str, default="CartPole-v0")
     parser.add_argument("--render", type=bool, default=False, help="")
@@ -127,8 +109,7 @@ def dueling_dqn_parameters():
 
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128, 128])
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
@@ -161,11 +142,6 @@ def d3qn_parameters():
     parser.add_argument("--is_discrete", type=bool, default=True)
     parser.add_argument("--use_noisy_layer", type=bool, default=False)
     parser.add_argument("--is_off_policy", type=bool, default=True)
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument("--beta", type=float, default=0.6)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
 
     parser.add_argument("--env-name", type=str, default="CartPole-v0")
     parser.add_argument("--render", type=bool, default=False, help="")
@@ -174,8 +150,7 @@ def d3qn_parameters():
 
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128, 128])
 
     parser.add_argument("--update-rate", type=int, default=100, help="update rate")
 
@@ -208,11 +183,6 @@ def noisy_dqn_parameters():
     parser.add_argument("--is_discrete", type=bool, default=True)
     parser.add_argument("--use_noisy_layer", type=bool, default=True)
     parser.add_argument("--is_off_policy", type=bool, default=True)
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument("--beta", type=float, default=0.6)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
 
     parser.add_argument("--env-name", type=str, default="CartPole-v0")
     parser.add_argument("--render", type=bool, default=False, help="")
@@ -221,8 +191,7 @@ def noisy_dqn_parameters():
 
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--update-rate", type=int, default=150, help="update rate")
 
@@ -253,11 +222,6 @@ def ddpg_parameters():
     parser.add_argument("--is_discrete", type=bool, default=False)
     parser.add_argument("--use_noisy_layer", type=bool, default=False)
     parser.add_argument("--is_off_policy", type=bool, default=True)
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.3)
-    parser.add_argument("--beta", type=float, default=1.0)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
 
     parser.add_argument("--env-name", type=str, default="Pendulum-v0")
     parser.add_argument("--render", type=bool, default=False, help="")
@@ -267,8 +231,7 @@ def ddpg_parameters():
     parser.add_argument("--actor-lr", type=float, default=3e-4, help="learning rate of actor")
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--target_update_interval", type=int, default=1, help="update rate")
 
@@ -312,11 +275,6 @@ def td3_parameters():
     parser.add_argument("--is_discrete", type=bool, default=False)
     parser.add_argument("--use_noisy_layer", type=bool, default=False)
     parser.add_argument("--is_off_policy", type=bool, default=True)
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.3)
-    parser.add_argument("--beta", type=float, default=1.0)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
 
     parser.add_argument("--env-name", type=str, default="Pendulum-v0")
     parser.add_argument("--render", type=bool, default=False, help="")
@@ -326,8 +284,7 @@ def td3_parameters():
     parser.add_argument("--actor-lr", type=float, default=3e-4, help="learning rate of actor")
     parser.add_argument("--critic-lr", type=float, default=1e-3, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--policy_freq", type=int, default=2, help="update rate")
 
@@ -370,11 +327,6 @@ def sac_parameters():
     parser.add_argument("--is_discrete", type=bool, default=False)
     parser.add_argument("--use_noisy_layer", type=bool, default=False)
     parser.add_argument("--is_off_policy", type=bool, default=True)
-    # PER parameters
-    parser.add_argument("--if_per", type=bool, default=False)
-    parser.add_argument("--alpha", type=float, default=0.3)
-    parser.add_argument("--beta", type=float, default=1.0)
-    parser.add_argument("--prior_eps", type=float, default=0.000001)
 
     parser.add_argument("--time-steps", type=int, default=3000000, help="number of time steps")
 
@@ -390,8 +342,7 @@ def sac_parameters():
     parser.add_argument("--min_epsilon", type=float, default=0.1, help="min epsilon")
     parser.add_argument("--epsilon_decay", type=float, default=0.0001, help="epsilon decay")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--buffer_size", type=int, default=100000, help="number of transitions can be stored in buffer")
     parser.add_argument("--batch_size", type=int, default=256, help="number of episodes to optimize at the same time")
@@ -429,8 +380,7 @@ def bc_sac_parameters():
     parser.add_argument("--critic-lr", type=float, default=3e-4, help="learning rate of critic")
     parser.add_argument("--alpha-lr", type=float, default=3e-4, help="learning rate of alpha")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--target_update_interval", type=int, default=1, help="update rate")
 
@@ -482,8 +432,7 @@ def a2c_parameters():
 
     parser.add_argument("--entropy_weight", type=float, default=1e-2, help="entropy weight")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--gamma", type=float, default=0.9, help="discount factor")
 
@@ -519,8 +468,7 @@ def ppo_parameters():
     parser.add_argument("--actor-lr", type=float, default=1e-4, help="learning rate of actor")
     parser.add_argument("--critic-lr", type=float, default=1e-4, help="learning rate of critic")
 
-    parser.add_argument("--hidden_units_mlp", default=[128, 128])
-    parser.add_argument("--hidden_units", default=128)
+    parser.add_argument("--hidden_units", default=[128, 128])
 
     parser.add_argument("--value_weight", type=float, default=0.5, help="value_weight")
     parser.add_argument("--entropy_weight", type=float, default=0.01, help="could be 0.02")
@@ -697,8 +645,7 @@ def slac_parameters():
     parser.add_argument("--z2_dim", type=int, default=256, help="latent z1 dim")
     parser.add_argument("--feature_dim", type=int, default=256, help="encoder feature dim")
     parser.add_argument("--num_sequences", type=int, default=8, help="number of sequences")
-    parser.add_argument("--hidden_units_mlp", default=(256, 256), help="number of hidden units")
-    parser.add_argument("--hidden_units", default=256)
+    parser.add_argument("--hidden_units", default=(256, 256), help="number of hidden units")
 
     parser.add_argument("--buffer_size", type=int, default=100000, help="number of transitions can be stored in buffer")
     parser.add_argument("--batch_size_sac", type=int, default=256, help="number of episodes to optimize at the same time")
