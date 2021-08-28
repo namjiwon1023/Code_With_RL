@@ -1,4 +1,4 @@
-import torch
+import torch as T
 import numpy as np
 import torch.nn as nn
 import gym
@@ -11,6 +11,10 @@ def tie_weights(src, trg):
     trg.weight = src.weight
     trg.bias = src.bias
 
+def update_params(optim, loss):
+    optim.zero_grad()
+    loss.backward()
+    optim.step()
 
 class eval_mode(object):
     def __init__(self, *models):
@@ -49,9 +53,9 @@ def weight_init(m):
         nn.init.orthogonal_(m.weight.data[:, :, mid, mid], gain)
 
 def set_seed_everywhere(seed):
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
+    T.manual_seed(seed)
+    if T.cuda.is_available():
+        T.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
 
@@ -74,11 +78,11 @@ def make_dir(dir_path):
 def preprocess_obs(obs, bits=5):
     """Preprocessing image, see https://arxiv.org/abs/1807.03039."""
     bins = 2**bits
-    assert obs.dtype == torch.float32
+    assert obs.dtype == T.float32
     if bits < 8:
-        obs = torch.floor(obs / 2**(8 - bits))
+        obs = T.floor(obs / 2**(8 - bits))
     obs = obs / bins
-    obs = obs + torch.rand_like(obs) / bins
+    obs = obs + T.rand_like(obs) / bins
     obs = obs - 0.5
     return obs
 
@@ -118,13 +122,13 @@ class ReplayBuffer(object):
             0, self.capacity if self.full else self.idx, size=self.batch_size
         )
 
-        obses = torch.as_tensor(self.obses[idxs], device=self.device).float()
-        actions = torch.as_tensor(self.actions[idxs], device=self.device)
-        rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
-        next_obses = torch.as_tensor(
+        obses = T.as_tensor(self.obses[idxs], device=self.device).float()
+        actions = T.as_tensor(self.actions[idxs], device=self.device)
+        rewards = T.as_tensor(self.rewards[idxs], device=self.device)
+        next_obses = T.as_tensor(
             self.next_obses[idxs], device=self.device
         ).float()
-        not_dones = torch.as_tensor(self.not_dones[idxs], device=self.device)
+        not_dones = T.as_tensor(self.not_dones[idxs], device=self.device)
 
         return obses, actions, rewards, next_obses, not_dones
 
@@ -140,7 +144,7 @@ class ReplayBuffer(object):
             self.not_dones[self.last_save:self.idx]
         ]
         self.last_save = self.idx
-        torch.save(payload, path)
+        T.save(payload, path)
 
     def load(self, save_dir):
         chunks = os.listdir(save_dir)
@@ -148,7 +152,7 @@ class ReplayBuffer(object):
         for chunk in chucks:
             start, end = [int(x) for x in chunk.split('.')[0].split('_')]
             path = os.path.join(save_dir, chunk)
-            payload = torch.load(path)
+            payload = T.load(path)
             assert self.idx == start
             self.obses[start:end] = payload[0]
             self.next_obses[start:end] = payload[1]

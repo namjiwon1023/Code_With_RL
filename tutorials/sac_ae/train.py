@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+import torch as T
 import argparse
 import os
 import math
@@ -12,7 +12,6 @@ import dmc2gym
 import copy
 
 import utils.utils as utils
-from utils.logger import Logger
 from utils.video import VideoRecorder
 
 from agent import SacAeAgent
@@ -27,7 +26,7 @@ def parse_args():
     parser.add_argument('--action_repeat', default=1, type=int)
     parser.add_argument('--frame_stack', default=3, type=int)
     # replay buffer
-    parser.add_argument('--replay_buffer_capacity', default=700000, type=int)#1000000
+    parser.add_argument('--replay_buffer_capacity', default=500000, type=int)#1000000
     # train
     parser.add_argument('--agent', default='sac_ae', type=str)
     parser.add_argument('--init_steps', default=1000, type=int)
@@ -77,7 +76,7 @@ def parse_args():
     return args
 
 
-def evaluate(env, agent, video, num_episodes, L, step):
+def evaluate(env, agent, video, num_episodes, step):
     for i in range(num_episodes):
         obs = env.reset()
         video.init(enabled=(i == 0))
@@ -89,11 +88,7 @@ def evaluate(env, agent, video, num_episodes, L, step):
             obs, reward, done, _ = env.step(action)
             video.record(env)
             episode_reward += reward
-
         video.save('%d.mp4' % step)
-        L.log('eval/episode_reward', episode_reward, step)
-    L.dump(step)
-
 
 def make_agent(obs_shape, action_shape, args, device):
     if args.agent == 'sac_ae':
@@ -153,7 +148,7 @@ def main():
     with open(os.path.join(args.work_dir, 'args.json'), 'w') as f:
         json.dump(vars(args), f, sort_keys=True, indent=4)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = T.device('cuda' if T.cuda.is_available() else 'cpu')
 
     # the dmc2gym wrapper standardizes actions
     assert env.action_space.low.min() >= -1
@@ -174,35 +169,26 @@ def main():
         device=device
     )
 
-    L = Logger(args.work_dir, use_tb=args.save_tb)
-
     episode, episode_reward, done = 0, 0, True
     start_time = time.time()
     for step in range(args.num_train_steps):
         if done:
             if step > 0:
-                L.log('train/duration', time.time() - start_time, step)
                 start_time = time.time()
-                L.dump(step)
 
             # evaluate agent periodically
             if step % args.eval_freq == 0:
-                L.log('eval/episode', episode, step)
-                evaluate(env, agent, video, args.num_eval_episodes, L, step)
+                evaluate(env, agent, video, args.num_eval_episodes, step)
                 if args.save_model:
                     agent.save(model_dir, step)
                 if args.save_buffer:
                     replay_buffer.save(buffer_dir)
-
-            L.log('train/episode_reward', episode_reward, step)
 
             obs = env.reset()
             done = False
             episode_reward = 0
             episode_step = 0
             episode += 1
-
-            L.log('train/episode', episode, step)
 
         # sample action for data collection
         if step < args.init_steps:
@@ -215,7 +201,7 @@ def main():
         if step >= args.init_steps:
             num_updates = args.init_steps if step == args.init_steps else 1
             for _ in range(num_updates):
-                agent.update(replay_buffer, L, step)
+                agent.update(replay_buffer, step)
 
         next_obs, reward, done, _ = env.step(action)
 
