@@ -23,9 +23,16 @@
 - [x] Deep Deterministic Policy Gradient(DDPG) (off-policy)
 - [x] Twin Delayed Deep Deterministic policy gradient(TD3) (off-policy)
 - [x] Soft Actor-Critic(SAC) (off-policy)
+- [x] Truncated Quantile Critics(TQC) (off-policy)
+- [ ] Distribution Correction(DisCor) based on Soft Actor-Critic(DisCor)
 
 ### Deep reinforcement learning with a latent variable model
 - [x] Stochastic Latent Actor-Critic(SLAC)
+- [x] SAC with AutoEncoder(SAC_AE)
+
+### Regularizing Deep Reinforcement Learning from Pixels
+- [ ] Data regularized Q(DrQ-v1)
+- [ ] Data regularized Q(DrQ-v2)
 
 ### Imitation Learning / Inverse Reinforcement Learning
 
