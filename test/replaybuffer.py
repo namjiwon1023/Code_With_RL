@@ -5,6 +5,7 @@
 
 import numpy as np
 import random
+from collections import deque
 
 from test.segment_tree import MinSegmentTree, SumSegmentTree
 
@@ -212,3 +213,170 @@ class PrioritizedReplayBuffer:
     def ready(self, batch_size):
         if self.cur_len >= batch_size:
             return True
+
+class NStepReplayBuffer:
+    def __init__(self, obs_dim, size, batch_size= 32, n_step= 3, gamma= 0.99):
+        self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
+        self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
+        self.acts_buf = np.zeros([size], dtype=np.float32)
+        self.rews_buf = np.zeros([size], dtype=np.float32)
+        self.done_buf = np.zeros(size, dtype=np.float32)
+        self.max_size, self.batch_size = size, batch_size
+        self.ptr, self.size, = 0, 0
+
+        # for N-step Learning
+        self.n_step_buffer = deque(maxlen=n_step)
+        self.n_step = n_step
+        self.gamma = gamma
+
+    def store(self, obs, act, rew, next_obs, done):
+        transition = (obs, act, rew, next_obs, done)
+        self.n_step_buffer.append(transition)
+
+        # single step transition is not ready
+        if len(self.n_step_buffer) < self.n_step:
+            return ()
+
+        # make a n-step transition
+        rew, next_obs, done = self._get_n_step_info(
+            self.n_step_buffer, self.gamma
+        )
+        obs, act = self.n_step_buffer[0][:2]
+
+        self.obs_buf[self.ptr] = obs
+        self.next_obs_buf[self.ptr] = next_obs
+        self.acts_buf[self.ptr] = act
+        self.rews_buf[self.ptr] = rew
+        self.done_buf[self.ptr] = done
+        self.ptr = (self.ptr + 1) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+
+        return self.n_step_buffer[0]
+
+    def sample_batch(self):
+        indices = np.random.choice(
+            self.size, size=self.batch_size, replace=False
+        )
+
+        return dict(
+            obs=self.obs_buf[indices],
+            next_obs=self.next_obs_buf[indices],
+            acts=self.acts_buf[indices],
+            rews=self.rews_buf[indices],
+            done=self.done_buf[indices],
+            # for N-step Learning
+            indices=indices,
+        )
+
+    def sample_batch_from_idxs(self, indices):
+        # for N-step Learning
+        return dict(
+            obs=self.obs_buf[indices],
+            next_obs=self.next_obs_buf[indices],
+            acts=self.acts_buf[indices],
+            rews=self.rews_buf[indices],
+            done=self.done_buf[indices],
+        )
+
+    def _get_n_step_info(self, n_step_buffer, gamma):
+        """Return n step rew, next_obs, and done."""
+        # info of the last transition
+        rew, next_obs, done = n_step_buffer[-1][-3:]
+
+        for transition in reversed(list(n_step_buffer)[:-1]):
+            r, n_o, d = transition[-3:]
+
+            rew = r + gamma * rew * (1 - d)
+            next_obs, done = (n_o, d) if d else (next_obs, done)
+
+        return rew, next_obs, done
+
+    def __len__(self) -> int:
+        return self.size
+
+class NStepBuffer:
+
+    def __init__(self, gamma=0.99, nstep=3):
+        self.discounts = [gamma ** i for i in range(nstep)]
+        self.nstep = nstep
+        self.states = deque(maxlen=self.nstep)
+        self.actions = deque(maxlen=self.nstep)
+        self.rewards = deque(maxlen=self.nstep)
+
+    def append(self, state, action, reward):
+        self.states.append(state)
+        self.actions.append(action)
+        self.rewards.append(reward)
+
+    def get(self):
+        assert len(self.rewards) > 0
+
+        state = self.states.popleft()
+        action = self.actions.popleft()
+        reward = self.nstep_reward()
+        return state, action, reward
+
+    def nstep_reward(self):
+        reward = np.sum([r * d for r, d in zip(self.rewards, self.discounts)])
+        self.rewards.popleft()
+        return reward
+
+    def is_empty(self):
+        return len(self.rewards) == 0
+
+    def is_full(self):
+        return len(self.rewards) == self.nstep
+
+    def __len__(self):
+        return len(self.rewards)
+
+
+class _ReplayBuffer:
+
+    def __init__(self, buffer_size, state_shape, action_shape, device,
+                gamma, nstep):
+        self._p = 0
+        self._n = 0
+        self.buffer_size = buffer_size
+        self.state_shape = state_shape
+        self.action_shape = action_shape
+        self.device = device
+        self.gamma = gamma
+        self.nstep = nstep
+
+        self.actions = torch.empty(
+            (buffer_size, *action_shape), dtype=torch.float, device=device)
+        self.rewards = torch.empty(
+            (buffer_size, 1), dtype=torch.float, device=device)
+        self.dones = torch.empty(
+            (buffer_size, 1), dtype=torch.float, device=device)
+
+        if nstep != 1:
+            self.nstep_buffer = NStepBuffer(gamma, nstep)
+
+    def append(self, state, action, reward, done, next_state,
+            episode_done=None):
+
+        if self.nstep != 1:
+            self.nstep_buffer.append(state, action, reward)
+
+            if self.nstep_buffer.is_full():
+                state, action, reward = self.nstep_buffer.get()
+                self._append(state, action, reward, done, next_state)
+
+            if done or episode_done:
+                while not self.nstep_buffer.is_empty():
+                    state, action, reward = self.nstep_buffer.get()
+                    self._append(state, action, reward, done, next_state)
+
+        else:
+            self._append(state, action, reward, done, next_state)
+
+    def _append(self, state, action, reward, done, next_state):
+        self.actions[self._p].copy_(torch.from_numpy(action))
+        self.rewards[self._p] = float(reward)
+        self.dones[self._p] = float(done)
+
+        self._p = (self._p + 1) % self.buffer_size
+        self._n = min(self._n + 1, self.buffer_size)
+
