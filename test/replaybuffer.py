@@ -51,18 +51,6 @@ class ReplayBuffer:
                     mask = self.masks[index],
                     )
 
-        '''
-        Spinning up style
-        from https://github.com/openai/spinningup
-        batch = dict(state = self.states[index],
-                    action = self.actions[index],
-                    reward = self.rewards[index],
-                    next_state = self.next_states[index],
-                    mask = self.masks[index],
-                    )
-        return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in batch.items()}
-        '''
-
     def clear(self):
 
         self.states = np.empty([self.max_size, self.n_states], dtype=np.float32)
@@ -330,7 +318,6 @@ class NStepBuffer:
     def __len__(self):
         return len(self.rewards)
 
-
 class _ReplayBuffer:
 
     def __init__(self, buffer_size, state_shape, action_shape, device,
@@ -344,12 +331,12 @@ class _ReplayBuffer:
         self.gamma = gamma
         self.nstep = nstep
 
-        self.actions = torch.empty(
-            (buffer_size, *action_shape), dtype=torch.float, device=device)
-        self.rewards = torch.empty(
-            (buffer_size, 1), dtype=torch.float, device=device)
-        self.dones = torch.empty(
-            (buffer_size, 1), dtype=torch.float, device=device)
+        self.actions = T.empty(
+            (buffer_size, *action_shape), dtype=T.float, device=device)
+        self.rewards = T.empty(
+            (buffer_size, 1), dtype=T.float, device=device)
+        self.dones = T.empty(
+            (buffer_size, 1), dtype=T.float, device=device)
 
         if nstep != 1:
             self.nstep_buffer = NStepBuffer(gamma, nstep)
@@ -373,10 +360,104 @@ class _ReplayBuffer:
             self._append(state, action, reward, done, next_state)
 
     def _append(self, state, action, reward, done, next_state):
-        self.actions[self._p].copy_(torch.from_numpy(action))
+        self.actions[self._p].copy_(T.from_numpy(action))
         self.rewards[self._p] = float(reward)
         self.dones[self._p] = float(done)
 
         self._p = (self._p + 1) % self.buffer_size
         self._n = min(self._n + 1, self.buffer_size)
 
+class NStepPrioritizedReplayBuffer(NStepReplayBuffer):
+    def __init__(self, obs_dim, size, batch_size = 32, alpha = 0.6, n_step = 1, gamma = 0.99,):
+        """Initialization."""
+        assert alpha >= 0
+
+        super(NStepPrioritizedReplayBuffer, self).__init__(
+            obs_dim, size, batch_size, n_step, gamma
+        )
+        self.max_priority, self.tree_ptr = 1.0, 0
+        self.alpha = alpha
+
+        # capacity must be positive and a power of 2.
+        tree_capacity = 1
+        while tree_capacity < self.max_size:
+            tree_capacity *= 2
+
+        self.sum_tree = SumSegmentTree(tree_capacity)
+        self.min_tree = MinSegmentTree(tree_capacity)
+
+    def store(self, obs, act, rew, next_obs, done,):
+        """Store experience and priority."""
+        transition = super().store(obs, act, rew, next_obs, done)
+
+        if transition:
+            self.sum_tree[self.tree_ptr] = self.max_priority ** self.alpha
+            self.min_tree[self.tree_ptr] = self.max_priority ** self.alpha
+            self.tree_ptr = (self.tree_ptr + 1) % self.max_size
+
+        return transition
+
+    def sample_batch(self, beta = 0.4):
+        """Sample a batch of experiences."""
+        assert len(self) >= self.batch_size
+        assert beta > 0
+
+        indices = self._sample_proportional()
+
+        obs = self.obs_buf[indices]
+        next_obs = self.next_obs_buf[indices]
+        acts = self.acts_buf[indices]
+        rews = self.rews_buf[indices]
+        done = self.done_buf[indices]
+        weights = np.array([self._calculate_weight(i, beta) for i in indices])
+
+        return dict(
+            obs=obs,
+            next_obs=next_obs,
+            acts=acts,
+            rews=rews,
+            done=done,
+            weights=weights,
+            indices=indices,
+        )
+
+    def update_priorities(self, indices, priorities):
+        """Update priorities of sampled transitions."""
+        assert len(indices) == len(priorities)
+
+        for idx, priority in zip(indices, priorities):
+            assert priority > 0
+            assert 0 <= idx < len(self)
+
+            self.sum_tree[idx] = priority ** self.alpha
+            self.min_tree[idx] = priority ** self.alpha
+
+            self.max_priority = max(self.max_priority, priority)
+
+    def _sample_proportional(self):
+        """Sample indices based on proportions."""
+        indices = []
+        p_total = self.sum_tree.sum(0, len(self) - 1)
+        segment = p_total / self.batch_size
+
+        for i in range(self.batch_size):
+            a = segment * i
+            b = segment * (i + 1)
+            upperbound = random.uniform(a, b)
+            idx = self.sum_tree.retrieve(upperbound)
+            indices.append(idx)
+
+        return indices
+
+    def _calculate_weight(self, idx, beta):
+        """Calculate the weight of the experience at idx."""
+        # get max weight
+        p_min = self.min_tree.min() / self.sum_tree.sum()
+        max_weight = (p_min * len(self)) ** (-beta)
+
+        # calculate weights
+        p_sample = self.sum_tree[idx] / self.sum_tree.sum()
+        weight = (p_sample * len(self)) ** (-beta)
+        weight = weight / max_weight
+
+        return weight
