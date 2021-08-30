@@ -44,6 +44,9 @@
 - [x] Prioritized Experience Replay(PER)
 - [ ] Hindsight Experience Replay(HER)
 
+### Neural network architecture designed for deep reinforcement learning
+- [x] Deep Dense Architectures in reinforcement learning(D2RL)
+
 ### Explore
 
 - [ ] Intrinsic Curiosity Module(ICM)
