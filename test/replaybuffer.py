@@ -6,6 +6,7 @@
 import numpy as np
 import random
 from collections import deque
+import torch as T
 
 from test.segment_tree import MinSegmentTree, SumSegmentTree
 
