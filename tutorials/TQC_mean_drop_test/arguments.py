@@ -25,9 +25,9 @@ def tqc_parameters():
     parser.add_argument("--ac_hidden_size", type=int, default=256)
     parser.add_argument("--cri_hidden_size", type=int, default=512)
 
-    parser.add_argument("--n_nets", type=int, default=5)
-    parser.add_argument("--top_quantiles_to_drop_per_net", type=int, default=2)
-    parser.add_argument("--n_quantiles", type=int, default=25)
+    parser.add_argument("--n_nets", type=int, default=10)
+    parser.add_argument("--top_quantiles_to_drop_per_net", type=int, default=5)
+    parser.add_argument("--n_quantiles", type=int, default=35)
 
     parser.add_argument("--log_std_min", type=int, default=-20)
     parser.add_argument("--log_std_max", type=int, default=2)

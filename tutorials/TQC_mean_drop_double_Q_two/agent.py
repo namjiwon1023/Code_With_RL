@@ -30,53 +30,43 @@ class TQCAgent:
         self.max_action = self.env.action_space.high[0]
         self.low_action = self.env.action_space.low[0]
 
-        # replay buffer
-        self.memory = ReplayBuffer(self.n_states, self.n_actions, self.args)
-        self.transition = list()
+        self.init_random_steps = args.init_random_steps
 
         # actor-critic net setting
         self.actor = Actor(self.n_states, self.n_actions, self.args)
-
         self.critic = MultiCritic(self.n_states, self.n_actions, self.args)
         self.critic_target = copy.deepcopy(self.critic)
-
-        # self.critic_multi_twin = MultiCriticTwin(self.n_states, self.n_actions, self.args)
-        # self.critic_multi_twin_target = copy.deepcopy(self.critic_multi_twin)
-
         self.critic_twin = CriticTwin(self.n_states, self.n_actions, self.args)
         self.critic_twin_target = copy.deepcopy(self.critic_twin)
+
+        # Temperature Coefficient
+        self.target_entropy = -self.n_actions # - dim|A|
+        self.log_alpha = T.zeros(1, requires_grad=True, device=self.args.device)
+        self.alpha = self.log_alpha.exp()
 
         # optimizer setting
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.args.actor_lr)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.args.critic_lr)
         self.critic_twin_optimizer = optim.Adam(self.critic_twin.parameters(), lr=self.args.critic_lr)
-        # self.critic_optimizer = optim.Adam(self.critic_multi_twin.parameters(), lr=self.args.critic_lr)
-
-        # Temperature Coefficient
-        self.target_entropy = -self.n_actions
-        self.log_alpha = T.zeros(1, requires_grad=True, device=self.args.device)
-        self.alpha = self.log_alpha.exp()
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=self.args.alpha_lr)
 
-        self.total_step = 0
-        self.init_random_steps = args.init_random_steps
+        # replay buffer
+        self.memory = ReplayBuffer(self.n_states, self.n_actions, self.args)
+        self.transition = list()
 
-        self.top_quantiles_to_drop = args.top_quantiles_to_drop_per_net * args.n_nets
-        self.quantiles_total = args.n_quantiles * args.n_nets
+        self.total_step = 0
+        self.learning_step = 0
 
         self.learning_step = 0
 
         self.train()
         self.critic_target.train()
-
         self.critic_twin_target.train()
-        # self.critic_multi_twin_target.train()
 
     def train(self, training=True):
         self.training = training
         self.actor.train(training)
         self.critic.train(training)
-        # self.critic_multi_twin.train(training)
         self.critic_twin.train(training)
 
     def choose_action(self, state, evaluate=False):
@@ -96,7 +86,7 @@ class TQCAgent:
 
     def learn(self, writer):
         self.learning_step += 1
-        # TD error
+
         # update value
         critic_loss_1, critic_loss_2, state = self._value_update(self.memory, self.args.batch_size)
         critic_loss = critic_loss_1 + critic_loss_2
@@ -110,14 +100,12 @@ class TQCAgent:
         # target network soft update
         if self.total_step % self.args.target_update_interval == 0:
             self._target_soft_update(self.critic_target, self.critic, self.args.tau)
+
         if self.total_step % self.args.target_update_interval == 0:
             self._target_soft_update(self.critic_twin_target, self.critic_twin, self.args.tau)
-        # if self.total_step % self.args.target_update_interval == 0:
-        #     self._target_soft_update(self.critic_multi_twin_target, self.critic_multi_twin, self.args.tau)
 
-        # actor_loss_1, actor_loss_2, new_log_prob = self._policy_update(state)
-        actor_loss_1, actor_loss_2, new_log_prob = self._policy_update(state)
-        actor_loss = actor_loss_1 + actor_loss_1
+        actor_loss_1, actor_loss_2, new_log_prob, draw_distribution_q, draw_double_min_q = self._policy_update(state)
+        actor_loss = actor_loss_1 + actor_loss_2
 
         # update Policy
         self.actor_optimizer.zero_grad()
@@ -141,12 +129,13 @@ class TQCAgent:
             writer.add_scalar("loss/distribution_critic", critic_loss_2.item(), self.learning_step)
             writer.add_scalar("loss/doubleQ_actor", actor_loss_2.item(), self.learning_step)
             writer.add_scalar("loss/distribution_actor", actor_loss_1.item(), self.learning_step)
+            writer.add_scalar("Q/distribution", draw_distribution_q.item(), self.learning_step)
+            writer.add_scalar("Q/min_double", draw_double_min_q.item(), self.learning_step)
 
     def save_models(self):
         print('------ Save model ------')
         _save_model(self.actor, self.actor_path)
         _save_model(self.critic, self.critic_path)
-        # _save_model(self.critic_multi_twin, self.critic_path)
         checkpoint_ = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'auxiliary.pth')
         _save_model(self.critic_twin, checkpoint_)
         checkpoint = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'log_alpha.pth')
@@ -156,22 +145,20 @@ class TQCAgent:
         print('------ load model ------')
         _load_model(self.actor, self.actor_path)
         _load_model(self.critic, self.critic_path)
-        # _load_model(self.critic_multi_twin, self.critic_path)
         checkpoint_ = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'auxiliary.pth')
         _load_model(self.critic_twin, checkpoint_)
         checkpoint = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'log_alpha.pth')
         self.log_alpha = T.load(checkpoint)
 
     # target network soft update
-    def _target_soft_update(self, target_net, eval_net, tau):
-        for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
+    def _target_soft_update(self, target, net, tau):
+        for t_p, l_p in zip(target.parameters(), net.parameters()):
             t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
 
     def _value_update(self, buffer, batch_size):
         with T.no_grad():
             # Select data from ReplayBuffer with batch_size size
             samples = buffer.sample_batch(batch_size)
-
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
             action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
@@ -179,19 +166,8 @@ class TQCAgent:
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
 
             next_action, next_log_prob = self.actor(next_state)
-            next_z = self.critic_target(next_state, next_action)
-            # next_z_1, next_z_2 = self.critic_multi_twin_target(next_state, next_action)
-            # n_q_1, n_q_2 = next_z_1.mean(), next_z_2.mean()
-            # if n_q_1 == T.min(n_q_1, n_q_2):
-            #     next_z = next_z_1
-            # else:
-            #     next_z = next_z_2
-            # if n_q_1 > n_q_2:
-            #     next_z = next_z_2
-            # else:
-            #     next_z = next_z_1
-            # next_z = T.min(next_z_1, next_z_2)
-            next_z_rs = next_z.reshape(batch_size, -1)
+            next_z = self.critic_target(next_state, next_action)      # torch.Size([256, 5, 25])
+            next_z_rs = next_z.reshape(batch_size, -1)                # torch.Size([256, 125])
             list_ = []
             names = locals()
             for i in range(self.args.n_nets):
@@ -201,44 +177,41 @@ class TQCAgent:
                 list_.append(names[f'net{i}_sorted_part'])
                 names[f'sorted_z_part'] = T.cat(list_, dim=-1)
 
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target = reward + (names[f'sorted_z_part'] - self.alpha * next_log_prob) * mask
-            # print('target:{}'.format(target))
+            target = reward + (names[f'sorted_z_part'] - self.alpha * next_log_prob) * mask   # torch.Size([256, 115])
 
-            next_target_q1, next_target_q2 = self.critic_twin_target(next_state, next_action)
-            next_target_q = T.min(next_target_q1, next_target_q2)
-            # Here we calculate action value Q(s,a) = R + yV(s')
-            target_q = reward + (next_target_q - self.alpha * next_log_prob) * mask
-            # print('target_q:{}'.format(target_q))
+            next_target_q1, next_target_q2 = self.critic_twin_target(next_state, next_action) # torch.Size([256, 1])
+            next_target_q = T.min(next_target_q1, next_target_q2)                             # torch.Size([256, 1])
+            target_q = reward + (next_target_q - self.alpha * next_log_prob) * mask           # torch.Size([256, 1])
 
-        # Twin Critic Network Loss functions
-        current_z = self.critic(state, action)
-        # current_z1, current_z2 = self.critic_multi_twin(state, action)
-        current_q1, current_q2 = self.critic_twin(state, action)
+        current_z = self.critic(state, action)                       # torch.Size([256, 5, 25])
+        current_q1, current_q2 = self.critic_twin(state, action)     # torch.Size([256, 1])
 
-        loss_1 = F.mse_loss(current_q1, target_q) + F.mse_loss(current_q2, target_q)
+
+        loss_1 = F.mse_loss(current_q1, target_q) + F.mse_loss(current_q2, target_q) # eg: loss with double q mse:6.825242042541504
+
         # TD error
         # update value
-        loss_2 = quantile_huber_loss_f(current_z, target, self.args.device)
-        # loss_1 = quantile_huber_loss_f(current_z1, target, self.args.device)
-        # loss_2 = quantile_huber_loss_f(current_z2, target, self.args.device)
+        loss_2 = quantile_huber_loss_f(current_z, target, self.args.device)          # eg: loss with huber:0.38809192180633545
+
 
         return loss_1, loss_2, state
 
     def _policy_update(self, state):
         new_action, new_log_prob = self.actor(state)
-        q = self.critic(state, new_action).mean(2).mean(1, keepdim=True)
+
+        # b = self.critic(state, new_action).mean(2) # b size : {} torch.Size([256, 5])
+
+        q = self.critic(state, new_action).mean(2).mean(1, keepdim=True)     #  torch.Size([256, 1])
+
         q_1, q_2 = self.critic_twin(state, new_action)
         q_ = T.min(q_1, q_2)
-        # z_1, z_2 = self.critic_multi_twin(state, new_action)
-        # z = T.min(z_1, z_2)
-        # q = T.min(z_1.mean(2).mean(1, keepdim=True), z_2.mean(2).mean(1, keepdim=True))
-        # q = z.mean(2).mean(1, keepdim=True)
+
         # update actor network
-        loss_1 = (self.alpha * new_log_prob - q).mean()
-        loss_2 = (self.alpha * new_log_prob - q_).mean()
-        # return loss_1, loss_2, new_log_prob
-        return loss_1, loss_2, new_log_prob
+        loss_1 = (self.alpha * new_log_prob - q).mean() # distribution actor loss :-19.76106834411621
+
+        loss_2 = (self.alpha * new_log_prob - q_).mean() # Double Q actor loss :-20.990163803100586
+
+        return loss_1, loss_2, new_log_prob, q.detach().mean(), q_.detach().mean()
 
     def _temperature_update(self, new_log_prob):
         alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
