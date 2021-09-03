@@ -24,23 +24,28 @@ class DrQAgent:
 
         utils.set_seed_everywhere(args.seed)
         # Environment setting
-        self.env = dmc.make(self.args.env_name,
-                            self.args.frame_stack,
-                            self.args.action_repeat,
-                            self.args.seed)
+        # self.env = dmc.make(self.args.env_name,
+        #                     self.args.frame_stack,
+        #                     self.args.action_repeat,
+        #                     self.args.seed)
 
-        self.n_states = self.env.observation_spec.shape
-        self.n_actions = self.env.action_spec.shape
+        # self.n_states = self.env.observation_spec().shape
+        # self.n_actions = self.env.action_spec().shape
+        self.env = self.make_env(args)
+
+        self.n_states = self.env.observation_space.shape
+        self.n_actions = self.env.action_space.shape
 
         # replay buffer
         self.memory = ReplayBuffer(self.n_states, self.n_actions, self.args.buffer_size, self.device)
         self.transition = list()
 
         # actor-critic net setting
-        self.encoder = Encoder(self.n_states)
+        self.encoder = Encoder(self.n_states, self.device)
         self.actor = Actor(self.encoder.repr_dim, self.n_actions, self.device, self.args.feature_dim, self.args.hidden_dim)
         self.critic = Critic(self.encoder.repr_dim, self.n_actions, self.device, self.args.feature_dim, self.args.hidden_dim)
         self.critic_target = copy.deepcopy(self.critic)
+
         self.aug = RandomShiftsAug(pad=self.args.image_pad)
 
         # loss function
@@ -102,7 +107,7 @@ class DrQAgent:
             # encode
             state = self.encoder(state)
             with T.no_grad():
-                next_state = self.encode(next_state)
+                next_state = self.encoder(next_state)
 
             critic_loss = self._value_update(state, action, reward, next_state, mask)
 
@@ -159,9 +164,6 @@ class DrQAgent:
 
     def _value_update(self, state, action, reward, next_state, mask):
         with T.no_grad():
-            # Select data from ReplayBuffer with batch_size size
-            state, action, reward, next_state, mask = buffer.sample_batch(batch_size)
-
             next_action, next_log_prob = self.actor(next_state)
             next_target_q1, next_target_q2 = self.critic_target(next_state, next_action)
             next_target_q = T.min(next_target_q1, next_target_q2)
@@ -175,8 +177,8 @@ class DrQAgent:
         return critic_loss
 
     def _policy_update(self, state):
-        new_action, new_log_prob = self.actor(state, detach_encoder=True)
-        q_1, q_2 = self.critic(state, new_action, detach_encoder=True)
+        new_action, new_log_prob = self.actor(state)
+        q_1, q_2 = self.critic(state, new_action)
         q = T.min(q_1, q_2)
         # update actor network
         actor_loss = (self.alpha * new_log_prob - q).mean()
@@ -185,3 +187,35 @@ class DrQAgent:
     def _temperature_update(self, new_log_prob):
         alpha_loss = -self.log_alpha * (new_log_prob.detach() + self.target_entropy).mean()
         return alpha_loss
+
+    def make_env(self, args):
+        """Helper function to create dm_control environment"""
+        if args.env_name == 'ball_in_cup_catch':
+            domain_name = 'ball_in_cup'
+            task_name = 'catch'
+        elif args.env_name == 'point_mass_easy':
+            domain_name = 'point_mass'
+            task_name = 'easy'
+        else:
+            domain_name = args.env_name.split('_')[0]
+            task_name = '_'.join(args.env_name.split('_')[1:])
+
+        camera_id = 2 if domain_name == 'quadruped' else 0
+
+        env = dmc2gym.make(domain_name=domain_name,
+                        task_name=task_name,
+                        seed=args.seed,
+                        visualize_reward=False,
+                        from_pixels=True,
+                        height=args.image_size,
+                        width=args.image_size,
+                        frame_skip=args.action_repeat,
+                        camera_id=camera_id)
+
+        env = utils.FrameStack(env, k=args.frame_stack)
+
+        env.seed(args.seed)
+        assert env.action_space.low.min() >= -1
+        assert env.action_space.high.max() <= 1
+
+        return env

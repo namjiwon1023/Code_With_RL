@@ -13,7 +13,6 @@ class Encoder(nn.Module):
         assert len(obs_shape) == 3   # C， W， H -> len(3, 84, 84) = 3
 
         self.output_logits = False
-        self.feature_dim = feature_dim
         self.device = device
         self.repr_dim = 32 * 35 * 35
 
@@ -27,7 +26,7 @@ class Encoder(nn.Module):
             nn.ReLU(),
             nn.Conv2d(32, 32, 3, stride=1),
             nn.ReLU(),
-        ).to(utils.weight_init)
+        )
 
         self.to(self.device)
 

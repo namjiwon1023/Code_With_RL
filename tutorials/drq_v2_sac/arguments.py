@@ -5,7 +5,7 @@ device = T.device('cuda' if T.cuda.is_available() else 'cpu')
 
 def drq_parameters():
     parser = argparse.ArgumentParser("Data regularized Q V2")
-    parser.add_argument("--algorithm", default='drq')
+    parser.add_argument("--algorithm", default='drq_v2')
 
     parser.add_argument("--device", default=device, help="GPU or CPU")
     parser.add_argument("--seed", type=int, default=1, help="random seed")
@@ -39,7 +39,7 @@ def drq_parameters():
 
     parser.add_argument("--init_random_steps", type=int, default=5000)
 
-    parser.add_argument("--buffer_size", type=int, default=1000000, help="number of transitions can be stored in buffer")
+    parser.add_argument("--buffer_size", type=int, default=500000, help="number of transitions can be stored in buffer")
     parser.add_argument("--batch_size", type=int, default=256, help="number of episodes to optimize at the same time")
 
     parser.add_argument("--evaluate-episodes", type=int, default=10, help="number of episodes for evaluating")
