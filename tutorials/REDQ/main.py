@@ -9,16 +9,16 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from agent import TQCAgent
-from arguments import tqc_parameters
+from agent import REDQSACAgent
+from arguments import redq_parameters
 from runner import Runner
 from utils import _random_seed
 
 if __name__ == '__main__':
-    args = tqc_parameters()
+    args = redq_parameters()
     writer = SummaryWriter('./logs/' + args.algorithm)
-    _random_seed(args.seed)
-    agent = TQCAgent(args)
+    agent = REDQSACAgent(args)
+    _random_seed(agent.env, agent.test_env, args.seed)
 
     runner = Runner(agent, args, writer)
 

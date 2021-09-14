@@ -10,11 +10,11 @@ class ReplayBuffer:
     def __init__(self, n_states, n_actions, args):
         self.device = args.device
 
-        self.states = np.empty((args.buffer_size, n_states), dtype=np.float32)
-        self.next_states = np.empty((args.buffer_size, n_states), dtype=np.float32)
-        self.actions = np.empty((args.buffer_size, n_actions), dtype=np.float32)
-        self.rewards = np.empty((args.buffer_size), dtype=np.float32)
-        self.masks = np.empty((args.buffer_size), dtype=np.float32)
+        self.states = np.zeros((args.buffer_size, n_states), dtype=np.float32)
+        self.next_states = np.zeros((args.buffer_size, n_states), dtype=np.float32)
+        self.actions = np.zeros((args.buffer_size, n_actions), dtype=np.float32)
+        self.rewards = np.zeros((args.buffer_size), dtype=np.float32)
+        self.masks = np.zeros((args.buffer_size), dtype=np.float32)
 
         self.max_size = args.buffer_size
         self.ptr, self.cur_len, = 0, 0

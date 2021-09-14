@@ -2,7 +2,7 @@ import torch as T
 import torch.nn as nn
 import os
 import numpy as np
-from torch.distributions import Normal
+from torch.distributions import Normal, Distribution
 
 class Actor(nn.Module):
     def __init__(self, n_states, n_actions, args):
@@ -12,21 +12,19 @@ class Actor(nn.Module):
         self.log_std_min = args.log_std_min
         self.log_std_max = args.log_std_max
 
-        self.feature = nn.Sequential(nn.Linear(n_states, args.ac_hidden_size),
-                                    nn.ReLU(),
-                                    nn.Linear(args.ac_hidden_size, args.ac_hidden_size),
-                                    nn.ReLU(),
-                                    )
-
-        self.log_std = nn.Linear(args.ac_hidden_size, n_actions)
-        self.mu = nn.Linear(args.ac_hidden_size, n_actions)
+        self.net = nn.Sequential(
+                                nn.Linear(n_states, args.ac_hidden_size),
+                                nn.ReLU(),
+                                nn.Linear(args.ac_hidden_size, args.ac_hidden_size),
+                                nn.ReLU(),
+                                nn.Linear(args.ac_hidden_size, 2*n_actions)
+                                )
         self.to(self.device)
 
     def forward(self, state, evaluate=False, with_logprob=True):
-        feature = self.feature(state)
 
-        mu = self.mu(feature)
-        log_std = self.log_std(feature)
+        mu, log_std = self.net(state).chunk(2, dim=-1)
+
         log_std = T.clamp(log_std, self.log_std_min, self.log_std_max)
         std = T.exp(log_std)
 
@@ -46,28 +44,82 @@ class Actor(nn.Module):
 
         return action, log_prob
 
-class MultiCritic(nn.Module):
+class QNet(nn.Module):
     def __init__(self, n_states, n_actions, args):
-        super(MultiCritic, self).__init__()
+        super(QNet, self).__init__()
         self.device = args.device
-        self.nets = []
-        self.n_quantiles = args.n_quantiles
-        self.n_nets = args.n_nets
-
-        for i in range(self.n_nets):
-            net = nn.Sequential(nn.Linear(n_states + n_actions, args.cri_hidden_size),
+        self.Q = nn.Sequential(nn.Linear(n_states + n_actions, args.cri_hidden_size),
                                 nn.ReLU(),
                                 nn.Linear(args.cri_hidden_size, args.cri_hidden_size),
                                 nn.ReLU(),
-                                nn.Linear(args.cri_hidden_size, args.cri_hidden_size),
-                                nn.ReLU(),
-                                nn.Linear(args.cri_hidden_size, self.n_quantiles),
-                                )
-            self.add_module(f'qf{i}', net)
-            self.nets.append(net)
+                                nn.Linear(args.cri_hidden_size, 1))
         self.to(self.device)
 
     def forward(self, state, action):
-        cat = T.cat((state, action), dim=1)
-        quantiles = T.stack(tuple(net(cat) for net in self.nets), dim=1)
-        return quantiles
+        cat = T.cat((state, action), dim=-1)
+        return self.Q(cat)
+
+class TanhNormal(Distribution):
+    """
+    Represent distribution of X where
+        X ~ tanh(Z)
+        Z ~ N(mean, std)
+    Note: this is not very numerically stable.
+    """
+    def __init__(self, normal_mean, normal_std, epsilon=1e-6):
+        """
+        :param normal_mean: Mean of the normal distribution
+        :param normal_std: Std of the normal distribution
+        :param epsilon: Numerical stability epsilon when computing log-prob.
+        """
+        self.normal_mean = normal_mean
+        self.normal_std = normal_std
+        self.normal = Normal(normal_mean, normal_std)
+        self.epsilon = epsilon
+
+    def log_prob(self, value, pre_tanh_value=None):
+        """
+        return the log probability of a value
+        :param value: some value, x
+        :param pre_tanh_value: arctanh(x)
+        :return:
+        """
+        # use arctanh formula to compute arctanh(value)
+        if pre_tanh_value is None:
+            pre_tanh_value = torch.log(
+                (1+value) / (1-value)
+            ) / 2
+        return self.normal.log_prob(pre_tanh_value) - \
+               torch.log(1 - value * value + self.epsilon)
+
+    def sample(self, return_pretanh_value=False):
+        """
+        Gradients will and should *not* pass through this operation.
+        See https://github.com/pytorch/pytorch/issues/4620 for discussion.
+        """
+        z = self.normal.sample().detach()
+
+        if return_pretanh_value:
+            return torch.tanh(z), z
+        else:
+            return torch.tanh(z)
+
+    def rsample(self, return_pretanh_value=False):
+        """
+        Sampling in the reparameterization case.
+        Implement: tanh(mu + sigma * eksee)
+        with eksee~N(0,1)
+        z here is mu+sigma+eksee
+        """
+        z = (
+            self.normal_mean +
+            self.normal_std *
+            Normal( ## this part is eksee~N(0,1)
+                torch.zeros(self.normal_mean.size()),
+                torch.ones(self.normal_std.size())
+            ).sample()
+        )
+        if return_pretanh_value:
+            return torch.tanh(z), z
+        else:
+            return torch.tanh(z)

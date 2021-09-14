@@ -7,6 +7,8 @@ import numpy as np
 from utils import _evaluate_agent
 import torch as T
 import os
+from datetime import timedelta
+from time import time
 
 class Runner:
     def __init__(self, agent, args, writer):
@@ -33,6 +35,7 @@ class Runner:
             self.agent.load_models()
 
     def run(self):
+        self.start_time = time()
         best_score = self.env.reward_range[0]
 
         scores = []
@@ -50,7 +53,7 @@ class Runner:
                 cur_episode_steps += 1
                 self.agent.total_step += 1
 
-                action = self.agent.choose_action(state, evaluate=False)
+                action = self.agent.select_exploration_action(state)
                 next_state, reward, done, _ = self.env.step(action)
 
                 real_done = False if cur_episode_steps >= self.episode_limit else done
@@ -61,20 +64,17 @@ class Runner:
                 state = next_state
                 score += reward
 
-                if self.agent.memory.ready(self.args.batch_size) and self.agent.total_step >= self.agent.init_random_steps:
-                    if self.agent.total_step == self.agent.init_random_steps:
-                        for _ in range(self.agent.init_random_steps):
-                            self.agent.learn(self.writer)
-                    else:
-                        self.agent.learn(self.writer)
+                self.agent.learn(self.writer)
 
                 if self.agent.total_step % self.args.evaluate_rate == 0 and self.agent.memory.ready(self.args.batch_size):
                     running_reward = np.mean(scores[-10:])
-                    eval_reward = _evaluate_agent(self.test_env, self.agent, self.args, n_starts=self.args.evaluate_episodes, render=False, evaluate=True)
+                    eval_reward = _evaluate_agent(self.test_env, self.agent, self.args, n_starts=self.args.evaluate_episodes, render=False)
                     eval_rewards.append(eval_reward)
+                    print_eval_reward = np.mean(eval_rewards[-10:])
                     self.writer.add_scalar('Reward/Train', running_reward, self.agent.total_step)
                     self.writer.add_scalar('Reward/Test', eval_reward, self.agent.total_step)
-                    print('| Episode : {} | Step : {} | Eval_Score : {} | Avg_Score : {} | update number : {} |'.format(i, self.agent.total_step, round(eval_reward, 2), round(avg_score, 2), self.agent.learning_step))
+                    self.writer.add_scalar('Reward/Test_avg', print_eval_reward, self.agent.total_step)
+                    print('| Episode : {} | Step : {} | Train Return : {} | Predict Return : {} | Predict Avg Return : {} | Critic update number : {} | Actor update number : {} | Time : {} | '.format(i, self.agent.total_step, round(running_reward, 2), round(eval_reward, 2), round(print_eval_reward, 2),  self.agent.critic_learning_step, self.agent.actor_learning_step, self.time))
                     scores = []
 
             scores.append(score)
@@ -93,5 +93,9 @@ class Runner:
                 break
 
     def evaluate(self):
-        returns = _evaluate_agent(self.test_env, self.agent, self.args, n_starts=1, render=True, evaluate=True)
+        returns = _evaluate_agent(self.test_env, self.agent, self.args, n_starts=1, render=True)
         return returns
+
+    @property
+    def time(self):
+        return str(timedelta(seconds=int(time() - self.start_time)))
