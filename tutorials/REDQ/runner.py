@@ -4,7 +4,7 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 import numpy as np
-from utils import _evaluate_agent
+from utils import _evaluate_agent, eval_mode
 import torch as T
 import os
 from datetime import timedelta
@@ -53,7 +53,9 @@ class Runner:
                 cur_episode_steps += 1
                 self.agent.total_step += 1
 
-                action = self.agent.select_exploration_action(state)
+                with eval_mode(self.agent):
+                    action = self.agent.select_exploration_action(state)
+
                 next_state, reward, done, _ = self.env.step(action)
 
                 real_done = False if cur_episode_steps >= self.episode_limit else done
@@ -66,7 +68,7 @@ class Runner:
 
                 self.agent.learn(self.writer)
 
-                if self.agent.total_step % self.args.evaluate_rate == 0 and self.agent.memory.ready(self.args.batch_size):
+                if self.agent.total_step % self.args.evaluate_rate == 0 and self.agent._get_current_num_data() >= self.agent.init_random_steps:
                     running_reward = np.mean(scores[-10:])
                     eval_reward = _evaluate_agent(self.test_env, self.agent, self.args, n_starts=self.args.evaluate_episodes, render=False)
                     eval_rewards.append(eval_reward)

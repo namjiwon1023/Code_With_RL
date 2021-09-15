@@ -14,7 +14,8 @@ def _evaluate_agent(env, agent, args, n_starts=10, render=False):
         while (not done):
             if render:
                 env.render()
-            action = agent.select_test_action(state)
+            with eval_mode(agent):
+                action = agent.select_test_action(state)
             next_state, reward, done, _ = env.step(action)
             reward_sum += reward
             state = next_state
@@ -73,3 +74,18 @@ def get_probabilistic_num_min(num_mins):
             return int(floored_num_mins)
     else:
         return num_mins
+
+class eval_mode(object):
+    def __init__(self, *models):
+        self.models = models
+
+    def __enter__(self):
+        self.prev_states = []
+        for model in self.models:
+            self.prev_states.append(model.training)
+            model.train(False)
+
+    def __exit__(self, *args):
+        for model, state in zip(self.models, self.prev_states):
+            model.train(state)
+        return False

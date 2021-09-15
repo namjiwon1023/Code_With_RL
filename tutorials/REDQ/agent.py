@@ -1,17 +1,16 @@
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions import Normal
 import numpy as np
 import os
-import copy
+# import copy
 import gym
 from gym.wrappers import RescaleAction
 
 from network import Actor, QNet
 
 from replaybuffer import ReplayBuffer
-from utils import disable_gradients, network_update, _save_model, _load_model, _target_soft_update, get_batch_buffer, mbpo_target_entropy_dict, get_probabilistic_num_min
+from utils import mbpo_target_entropy_dict
 
 class REDQSACAgent:
     def __init__(self, args):
@@ -24,9 +23,9 @@ class REDQSACAgent:
 
         # Environment setting
         self.env = gym.make(args.env_name)
-        self.test_env = gym.make(args.env_name)
-
         self.env = RescaleAction(self.env, -1, 1)
+
+        self.test_env = gym.make(args.env_name)
         self.test_env = RescaleAction(self.test_env, -1, 1)
 
         self.n_states = self.env.observation_space.shape[0]
@@ -52,8 +51,10 @@ class REDQSACAgent:
         for q_i in range(self.args.num_Q):
             new_q_net = QNet(self.n_states, self.n_actions, self.args)
             self.q_net_list.append(new_q_net)
-            new_q_target_net = copy.deepcopy(new_q_net)
-            disable_gradients(new_q_target_net)
+            # new_q_target_net = copy.deepcopy(new_q_net)
+            new_q_target_net = QNet(self.n_states, self.n_actions, self.args)
+            new_q_target_net.load_state_dict(new_q_net.state_dict())
+            # disable_gradients(new_q_target_net)
             self.q_target_net_list.append(new_q_target_net)
 
         # Temperature Coefficient
@@ -62,7 +63,6 @@ class REDQSACAgent:
         if args.target_entropy == 'mbpo':
             self.target_entropy = mbpo_target_entropy_dict[args.env_name]
         self.log_alpha = T.zeros(1, requires_grad=True, device=self.args.device)
-        self.alpha = self.log_alpha.exp()
 
         # optimizer setting
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.args.actor_lr)
@@ -72,8 +72,17 @@ class REDQSACAgent:
             self.q_optimizer_list.append(optim.Adam(self.q_net_list[q_i].parameters(), lr=self.args.critic_lr))
 
         self.total_step = 0
-
         self.critic_learning_step, self.actor_learning_step = 0, 0
+
+        self.train()
+        for i in range(self.args.num_Q):
+            self.q_target_net_list[i].train()
+
+    def train(self, training=True):
+        self.training = training
+        self.actor.train(training)
+        for i in range(self.args.num_Q):
+            self.q_net_list[i].train(training)
 
     def select_exploration_action(self, state):
         with T.no_grad():
@@ -94,11 +103,15 @@ class REDQSACAgent:
     def _get_current_num_data(self):
         return len(self.memory)
 
+    @property
+    def alpha(self):
+        return self.log_alpha.exp()
+
     def learn(self, writer):
         num_update = 0 if self._get_current_num_data() <= self.delay_update_steps else self.args.utd_ratio
         for i_update in range(num_update):
             self.critic_learning_step += 1
-            state, next_state, action, reward, mask = get_batch_buffer(self.memory, self.args.batch_size, self.args.device, self.n_actions)
+            state, next_state, action, reward, mask = self._get_batch_buffer(self.memory, self.args.batch_size)
             # TD error
             # update value
             critic_loss = self._value_update(state, next_state, action, reward, mask)
@@ -106,60 +119,82 @@ class REDQSACAgent:
             for q_i in range(self.args.num_Q):
                 self.q_optimizer_list[q_i].zero_grad()
             critic_loss.backward()
-            for q_i in range(self.args.num_Q):
-                self.q_optimizer_list[q_i].step()
+            # for q_i in range(self.args.num_Q):
+            #     self.q_optimizer_list[q_i].step()
 
-            for q_i in range(self.args.num_Q):
-                for p in self.q_net_list[q_i].parameters():
-                    p.requires_grad = False
+            # for q_i in range(self.args.num_Q):
+            #     for p in self.q_net_list[q_i].parameters():
+            #         p.requires_grad = False
 
             if ((i_update + 1) % self.args.policy_update_delay == 0) or i_update == num_update - 1:
                 self.actor_learning_step += 1
                 actor_loss, new_log_prob = self._policy_update(state)
 
-                # update Policy
-                network_update(self.actor_optimizer, actor_loss)
+                self.actor_optimizer.zero_grad()
+                actor_loss.backward()
+
+                # # update Policy
+                # network_update(self.actor_optimizer, actor_loss)
+
+                for sample_idx in range(self.args.num_Q):
+                    self.q_net_list[sample_idx].requires_grad_(True)
 
                 # update Temperature Coefficient
                 alpha_loss = self._temperature_update(new_log_prob)
 
-                network_update(self.alpha_optimizer, alpha_loss)
-
-                self.alpha = self.log_alpha.exp()
+                self.alpha_optimizer.zero_grad()
+                alpha_loss.backward()
+                self.alpha_optimizer.step()
 
                 if self.actor_learning_step % 1000 == 0:
                     writer.add_scalar("loss/actor", actor_loss.detach().item(), self.actor_learning_step)
                     writer.add_scalar("loss/alpha", alpha_loss.detach().item(), self.actor_learning_step)
                     writer.add_scalar("value/alpha", self.alpha.detach().item(), self.actor_learning_step)
 
-            for q_i in range(self.args.num_Q):
-                for p in self.q_net_list[q_i].parameters():
-                    p.requires_grad = True
+
+                # network_update(self.alpha_optimizer, alpha_loss)
+
+            # for q_i in range(self.args.num_Q):
+            #     for p in self.q_net_list[q_i].parameters():
+            #         p.requires_grad = True
 
             # target network soft update
+
             for q_i in range(self.args.num_Q):
-                _target_soft_update(self.q_target_net_list[q_i], self.q_net_list[q_i], self.args.tau)
+                self.q_optimizer_list[q_i].step()
+
+            if ((i_update + 1) % self.args.policy_update_delay == 0) or i_update == num_update - 1:
+                self.actor_optimizer.step()
+
+            for q_i in range(self.args.num_Q):
+                self._target_soft_update(self.q_target_net_list[q_i], self.q_net_list[q_i], self.args.tau)
 
             if self.critic_learning_step % 1000 == 0:
                 writer.add_scalar("loss/critic", critic_loss.detach().item(), self.critic_learning_step)
 
     def save_models(self):
         print('------ Save model ------')
-        _save_model(self.actor, self.actor_path)
+        self._save_model(self.actor, self.actor_path)
         for i in range(self.args.num_Q):
-            _save_model(self.q_net_list[i], self.names[f'q_net_{i}_path'])
+            self._save_model(self.q_net_list[i], self.names[f'q_net_{i}_path'])
         checkpoint = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'log_alpha.pth')
         T.save(self.log_alpha, checkpoint)
 
     def load_models(self):
         print('------ load model ------')
-        _load_model(self.actor, self.actor_path)
+        self._load_model(self.actor, self.actor_path)
         for i in range(self.args.num_Q):
-            _load_model(self.q_net_list[i], self.names[f'q_net_{i}_path'])
+            self._load_model(self.q_net_list[i], self.names[f'q_net_{i}_path'])
         checkpoint = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'log_alpha.pth')
         self.log_alpha = T.load(checkpoint)
 
     def _value_update(self, state, next_state, action, reward, mask):
+        assert state.shape == (self.args.batch_size, self.n_states)
+        assert next_state.shape == (self.args.batch_size, self.n_states)
+        assert action.shape == (self.args.batch_size, self.n_actions)
+        assert reward.shape == (self.args.batch_size, 1)
+        assert mask.shape == (self.args.batch_size, 1)
+
         target, sample_idxs = self._redq_q_target(next_state, reward, mask)
 
         q_prediction_list = []
@@ -174,17 +209,22 @@ class REDQSACAgent:
         return q_loss_all
 
     def _policy_update(self, state):
-        new_action, new_log_prob = self.actor(state)
+        assert state.shape == (self.args.batch_size, self.n_states)
 
+        new_action, new_log_prob = self.actor(state)
         actor_new_q_list = []
         for sample_idx in range(self.args.num_Q):
+            self.q_net_list[sample_idx].requires_grad_(False)
             new_q = self.q_net_list[sample_idx](state, new_action)
             actor_new_q_list.append(new_q)
-        actor_new_q_cat = T.cat(actor_new_q_list, 1)
+        actor_new_q_cat = T.cat(actor_new_q_list, dim=1)
 
         ave_q = T.mean(actor_new_q_cat, dim=1, keepdim=True)
 
         actor_loss = (self.alpha * new_log_prob - ave_q).mean()
+
+        # for sample_idx in range(self.args.num_Q):
+        #     self.q_net_list[sample_idx].requires_grad_(True)
 
         return actor_loss, new_log_prob
 
@@ -193,7 +233,11 @@ class REDQSACAgent:
         return alpha_loss
 
     def _redq_q_target(self, next_state, reward, mask):
-        num_mins_to_use = get_probabilistic_num_min(self.args.num_min)
+        assert next_state.shape == (self.args.batch_size, self.n_states)
+        assert reward.shape == (self.args.batch_size, 1)
+        assert mask.shape == (self.args.batch_size, 1)
+
+        num_mins_to_use = self._get_probabilistic_num_min(self.args.num_min)
         sample_idxs = np.random.choice(self.args.num_Q, num_mins_to_use, replace=False)
         with T.no_grad():
             if self.args.q_target_mode == 'min':
@@ -203,7 +247,7 @@ class REDQSACAgent:
                 for sample_idx in sample_idxs:
                     q_prediction_next = self.q_target_net_list[sample_idx](next_state, next_action)
                     q_prediction_next_list.append(q_prediction_next)
-                q_prediction_next_cat = T.cat(q_prediction_next_list, 1)
+                q_prediction_next_cat = T.cat(q_prediction_next_list, dim=1)
                 min_q, min_indices = T.min(q_prediction_next_cat, dim=1, keepdim=True)
                 target = reward + (min_q - self.alpha * next_log_prob) * mask
 
@@ -214,7 +258,7 @@ class REDQSACAgent:
                 for q_i in range(self.args.num_Q):
                     q_prediction_next = self.q_target_net_list[q_i](next_state, next_action)
                     q_prediction_next_list.append(q_prediction_next)
-                q_prediction_next_ave = T.cat(q_prediction_next_list, 1).mean(dim=1).reshape(-1, 1)
+                q_prediction_next_ave = T.cat(q_prediction_next_list, dim=1).mean(dim=1).reshape(-1, 1)
                 target = reward + (q_prediction_next_ave - self.alpha * next_log_prob) * mask
 
             if self.args.q_target_mode == 'rem':
@@ -225,7 +269,7 @@ class REDQSACAgent:
                     q_prediction_next = self.q_target_net_list[q_i](next_state, next_action)
                     q_prediction_next_list.append(q_prediction_next)
                 # apply rem here
-                q_prediction_next_cat = T.cat(q_prediction_next_list, 1)
+                q_prediction_next_cat = T.cat(q_prediction_next_list, dim=1)
                 rem_weight = T.Tensor(np.random.uniform(0, 1, q_prediction_next_cat.shape)).to(device=self.args.device)
                 normalize_sum = rem_weight.sum(1).reshape(-1, 1).expand(-1, self.args.num_Q)
                 rem_weight = rem_weight / normalize_sum
@@ -234,3 +278,37 @@ class REDQSACAgent:
 
         return target, sample_idxs
 
+    def _get_batch_buffer(self, buffer, batch_size):
+        assert buffer is not None
+        assert batch_size >= 0
+
+        with T.no_grad():
+            samples = buffer.sample_batch(batch_size)
+            state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
+            next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
+            reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
+            mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
+        return state, next_state, action, reward, mask
+
+    def _save_model(self, net, dirpath):
+        T.save(net.state_dict(), dirpath)
+
+    def _load_model(self, net, dirpath):
+        net.load_state_dict(T.load(dirpath))
+
+    def _target_soft_update(self, target_net, eval_net, tau):
+        for t_p, l_p in zip(target_net.parameters(), eval_net.parameters()):
+            t_p.data.copy_(tau * l_p.data + (1 - tau) * t_p.data)
+
+    def _get_probabilistic_num_min(self, num_mins):
+        # allows the number of min to be a float
+        floored_num_mins = np.floor(num_mins)
+        if num_mins - floored_num_mins > 0.001:
+            prob_for_higher_value = num_mins - floored_num_mins
+            if np.random.uniform(0, 1) < prob_for_higher_value:
+                return int(floored_num_mins+1)
+            else:
+                return int(floored_num_mins)
+        else:
+            return num_mins

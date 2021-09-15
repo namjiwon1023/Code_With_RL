@@ -40,7 +40,7 @@ def redq_parameters():
     parser.add_argument("--buffer_size", type=int, default=1000000, help="number of transitions can be stored in buffer")
     parser.add_argument("--batch_size", type=int, default=256, help="number of episodes to optimize at the same time")
 
-    parser.add_argument("--evaluate-episodes", type=int, default=10, help="number of episodes for evaluating")
+    parser.add_argument("--evaluate-episodes", type=int, default=1, help="number of episodes for evaluating")
     parser.add_argument("--evaluate-rate", type=int, default=1000, help="how often to evaluate model")
     parser.add_argument("--evaluate", type=bool, default=False)
 
