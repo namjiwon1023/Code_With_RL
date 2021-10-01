@@ -10,197 +10,13 @@ import random
 from mpi4py import MPI
 from torch.utils.tensorboard import SummaryWriter
 import argparse
-import numpy as np
-from icsl_rl.utils import _store_expert_data
-import torch as T
-import torch
-import yaml
-from moviepy.editor import ImageSequenceClip
-import matplotlib.pyplot as plt
-import math
+from utils import _store_expert_data
 
 from datetime import timedelta
 from time import sleep, time
 
-from mpi4py import MPI
-import os, subprocess, sys
-import numpy as np
-
-def _read_yaml(params):
-    with open(params, encoding='utf-8') as f:
-        config = yaml.load(f.read(), Loader=yaml.FullLoader)
-    return config
-
-# sync_networks across the different cores
-# 跨不同核心的同步网络
-def sync_networks(network):
-    """
-    netowrk is the network you want to sync
-    network 是您要同步的网络
-
-    """
-    comm = MPI.COMM_WORLD
-    flat_params = _get_flat_params_or_grads(network, mode='params')
-    comm.Bcast(flat_params, root=0)
-    # set the flat params back to the network
-    # 将平面参数设置回网络
-    _set_flat_params_or_grads(network, flat_params, mode='params')
-
-def sync_grads(network):
-    flat_grads = _get_flat_params_or_grads(network, mode='grads')
-    comm = MPI.COMM_WORLD
-    global_grads = np.zeros_like(flat_grads)
-    comm.Allreduce(flat_grads, global_grads, op=MPI.SUM)
-    _set_flat_params_or_grads(network, global_grads, mode='grads')
-
-# get the flat grads or params
-# 获取平面的 grads 或 params
-def _get_flat_params_or_grads(network, mode='params'):
-    """
-    include two kinds: grads and params
-    包括两种：grads 和 params
-
-    """
-    attr = 'data' if mode == 'params' else 'grad'
-    return np.concatenate([getattr(param, attr).cpu().numpy().flatten() for param in network.parameters()])
-
-def _set_flat_params_or_grads(network, flat_params, mode='params'):
-    """
-    include two kinds: grads and params
-    包括两种：grads 和 params
-
-    """
-    attr = 'data' if mode == 'params' else 'grad'
-    # the pointer
-    # 指针
-    pointer = 0
-    for param in network.parameters():
-        getattr(param, attr).copy_(torch.tensor(flat_params[pointer:pointer + param.data.numel()]).view_as(param.data))
-        pointer += param.data.numel()
-
-# def mpi_fork(n, bind_to_core=False):
-#     """
-#     Re-launches the current script with workers linked by MPI.
-
-#     Also, terminates the original process that launched it.
-
-#     Taken almost without modification from the Baselines function of the
-#     `same name`_.
-
-#     .. _`same name`: https://github.com/openai/baselines/blob/master/baselines/common/mpi_fork.py
-
-#     Args:
-#         n (int): Number of process to split into.
-
-#         bind_to_core (bool): Bind each MPI process to a core.
-#     """
-#     if n<=1:
-#         return
-#     if os.getenv("IN_MPI") is None:
-#         env = os.environ.copy()
-#         env.update(
-#             MKL_NUM_THREADS="1",
-#             OMP_NUM_THREADS="1",
-#             IN_MPI="1"
-#         )
-#         args = ["mpirun", "-np", str(n)]
-#         if bind_to_core:
-#             args += ["-bind-to", "core"]
-#         args += [sys.executable] + sys.argv
-#         subprocess.check_call(args, env=env)
-#         sys.exit()
-
-# def msg(m, string=''):
-#     print(('Message from %d: %s \t '%(MPI.COMM_WORLD.Get_rank(), string))+str(m))
-
-# def proc_id():
-#     """Get rank of calling process."""
-#     return MPI.COMM_WORLD.Get_rank()
-
-# def allreduce(*args, **kwargs):
-#     return MPI.COMM_WORLD.Allreduce(*args, **kwargs)
-
-# def num_procs():
-#     """Count active MPI processes."""
-#     return MPI.COMM_WORLD.Get_size()
-
-# def broadcast(x, root=0):
-#     MPI.COMM_WORLD.Bcast(x, root=root)
-
-# def mpi_op(x, op):
-#     x, scalar = ([x], True) if np.isscalar(x) else (x, False)
-#     x = np.asarray(x, dtype=np.float32)
-#     buff = np.zeros_like(x, dtype=np.float32)
-#     allreduce(x, buff, op=op)
-#     return buff[0] if scalar else buff
-
-# def mpi_sum(x):
-#     return mpi_op(x, MPI.SUM)
-
-# def mpi_avg(x):
-#     """Average a scalar or vector over MPI processes."""
-#     return mpi_sum(x) / num_procs()
-
-# def mpi_statistics_scalar(x, with_min_and_max=False):
-#     """
-#     Get mean/std and optional min/max of scalar x across MPI processes.
-
-#     Args:
-#         x: An array containing samples of the scalar to produce statistics
-#             for.
-
-#         with_min_and_max (bool): If true, return min and max of x in 
-#             addition to mean and std.
-#     """
-#     x = np.array(x, dtype=np.float32)
-#     global_sum, global_n = mpi_sum([np.sum(x), len(x)])
-#     mean = global_sum / global_n
-
-#     global_sum_sq = mpi_sum(np.sum((x - mean)**2))
-#     std = np.sqrt(global_sum_sq / global_n)  # compute global std
-
-#     if with_min_and_max:
-#         global_min = mpi_op(np.min(x) if len(x) > 0 else np.inf, op=MPI.MIN)
-#         global_max = mpi_op(np.max(x) if len(x) > 0 else -np.inf, op=MPI.MAX)
-#         return mean, std, global_min, global_max
-#     return mean, std
-
-# import multiprocessing
-# import numpy as np
-# import os
-# import torch
-# from mpi4py import MPI
-# from icsl_rl.mpi_tools import broadcast, mpi_avg, num_procs, proc_id
-
-# def setup_pytorch_for_mpi():
-#     """
-#     Avoid slowdowns caused by each separate process's PyTorch using
-#     more than its fair share of CPU resources.
-#     """
-#     #print('Proc %d: Reporting original number of Torch threads as %d.'%(proc_id(), torch.get_num_threads()), flush=True)
-#     if torch.get_num_threads()==1:
-#         return
-#     fair_num_threads = max(int(torch.get_num_threads() / num_procs()), 1)
-#     torch.set_num_threads(fair_num_threads)
-#     #print('Proc %d: Reporting new number of Torch threads as %d.'%(proc_id(), torch.get_num_threads()), flush=True)
-
-# def mpi_avg_grads(module):
-#     """ Average contents of gradient buffers across MPI processes. """
-#     if num_procs()==1:
-#         return
-#     for p in module.parameters():
-#         p_grad_numpy = p.grad.numpy()   # numpy view of tensor data
-#         avg_p_grad = mpi_avg(p.grad)
-#         p_grad_numpy[:] = avg_p_grad[:]
-
-# def sync_params(module):
-#     """ Sync all parameters of module across all MPI processes. """
-#     if num_procs()==1:
-#         return
-#     for p in module.parameters():
-#         p_numpy = p.data.numpy()
-#         broadcast(p_numpy)
 import threading
+
 def _make_gif(policy, env, args, maxsteps=1000):
     envname = env.spec.id
     gif_name = '_'.join([envname])
@@ -240,13 +56,14 @@ def _evaluate_agent(env, agent, args, n_starts=10):
     return reward_sum / n_starts
 
 class ReplayBuffer:
-    def __init__(self, n_states, n_actions, args, buffer_size=None):
+    def __init__(self, n_states, n_actions, args, gpu_id, buffer_size=None):
         if buffer_size == None:
             buffer_size = args.buffer_size
 
-        self.device = args.device
+        self.device = T.device(f"cuda:{gpu_id}" if (torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
 
         self.states = np.empty([buffer_size, n_states], dtype=np.float32)
+        # self.states = T.empty([buffer_size, n_states], dtype=T.float32)
         self.next_states = np.empty([buffer_size, n_states], dtype=np.float32)
         self.actions = np.empty([buffer_size, n_actions],dtype=np.float32)
         self.rewards = np.empty([buffer_size], dtype=np.float32)
@@ -338,9 +155,9 @@ def reset_parameters(Sequential, std=1.0, bias_const=1e-6):
 
 
 class Actor(nn.Module): # Deterministic Policy Gradient(DPG), Deep Deterministic Policy Gradient(DDPG), Twin Delayed Deep Deterministic Policy Gradients(TD3)
-    def __init__(self, n_states, n_actions, args, max_action=None):
+    def __init__(self, n_states, n_actions, args, gpu_id, max_action=None):
         super(Actor, self).__init__()
-        self.device = args.device
+        self.device = T.device(f"cuda:{gpu_id}" if (torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
         self.max_action = max_action
 
         self.pi = create_mlp([n_states] + list(args.hidden_sizes) + [n_actions], args.activation, nn.Tanh)
@@ -356,9 +173,9 @@ class Actor(nn.Module): # Deterministic Policy Gradient(DPG), Deep Deterministic
 
 
 class CriticQ(nn.Module): # Action Value Function
-    def __init__(self, n_states, n_actions, args):
+    def __init__(self, n_states, n_actions, args, gpu_id):
         super(CriticQ, self).__init__()
-        self.device = args.device
+        self.device = T.device(f"cuda:{gpu_id}" if (torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
 
         self.Value = create_mlp([n_states + n_actions] + list(args.hidden_sizes) + [1], args.activation)
 
@@ -406,7 +223,7 @@ class OUNoise:
         return self.state
 
 class DDPGAgent:
-    def __init__(self, env_fn, args):
+    def __init__(self, env_fn, args, gpu_id):
 
         # setup_pytorch_for_mpi()
 

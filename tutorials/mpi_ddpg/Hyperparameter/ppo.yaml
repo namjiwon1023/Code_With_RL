@@ -1,0 +1,33 @@
+# Proximal Policy Optimization
+# You can modify the hyperparameters here
+
+algorithm: 'PPO'
+actor_lr: 0.0001      # Actor Network learning rate
+critic_lr: 0.0001      # Critic Network learning rate
+
+value_weight: 0.5
+entropy_weight: 0.01
+
+max_ep_len: 1200  # max epsilon length
+update_step: 4800    #  max_ep_len * 4
+
+epoch: 128
+use_clipped_value_loss: False
+standardize_advantage: False
+
+
+gamma: 0.99           # discount factor
+tau: 0.98             # could be 0.95~0.99, GAE (Generalized Advantage Estimation. ICLR.2016.)
+hidden_size: 128      # hidden layer units
+
+batch_size: 128        # number of episodes to optimize at the same time
+
+# explore
+epsilon: 0.3          # ratio.clamp(1 - clip, 1 + clip)
+
+
+use_epsilon: False
+is_discrete: False
+
+use_noisy_layer: False
+is_off_policy: False
