@@ -1,0 +1,17 @@
+# DQN for using Noise Network
+# You can modify the hyperparameters here
+
+algorithm: 'Noisy_DQN'
+critic_lr: 0.001      # learning rate
+gamma: 0.99           # discount factor
+tau: 0.01             # parameter for updating the target network(soft update)
+hidden_size: 128      # hidden layer units
+update_rate: 150      # target network hard update rate
+buffer_size: 10000     # number of transitions can be stored in buffer
+batch_size: 128        # number of episodes to optimize at the same time
+
+use_noisy_layer: True
+
+use_epsilon: False
+is_discrete: True
+is_off_policy: True
