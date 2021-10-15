@@ -60,8 +60,8 @@ class SACAgent(object):
 
     def choose_action(self, state, epsilon):
         with T.no_grad():
-            # if self.total_step < self.args.start_step and not self.args.evaluate:
-            if epsilon >= np.random.random() and not self.args.evaluate:
+            if self.total_step < self.args.start_steps and not self.args.evaluate:
+            # if epsilon >= np.random.random() and not self.args.evaluate:
                 choose_action = np.random.uniform(self.low_action, self.max_action, self.n_actions)
             else :
                 choose_action, _ = self.actor(T.as_tensor(state, dtype=T.float32, device=self.actor.device))
@@ -76,7 +76,7 @@ class SACAgent(object):
 
             state = T.as_tensor(samples['state'], dtype=T.float32, device=self.args.device)
             next_state = T.as_tensor(samples['next_state'], dtype=T.float32, device=self.args.device)
-            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, 1)
+            action = T.as_tensor(samples['action'], dtype=T.float32, device=self.args.device).reshape(-1, self.n_actions)
             reward = T.as_tensor(samples['reward'], dtype=T.float32, device=self.args.device).reshape(-1,1)
             mask = T.as_tensor(samples['mask'], dtype=T.float32, device=self.args.device).reshape(-1,1)
 

@@ -13,7 +13,7 @@ class ReplayBuffer:
 
         self.states = np.empty([args.buffer_size, n_states], dtype=np.float32)
         self.next_states = np.empty([args.buffer_size, n_states], dtype=np.float32)
-        self.actions = np.empty([args.buffer_size],dtype=np.float32)
+        self.actions = np.empty([args.buffer_size, n_actions],dtype=np.float32)
         self.rewards = np.empty([args.buffer_size], dtype=np.float32)
         self.masks = np.empty([args.buffer_size],dtype=np.float32)
 

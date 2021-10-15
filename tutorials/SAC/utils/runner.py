@@ -90,7 +90,7 @@ class Runner:
             if self.agent.total_step >= self.args.time_steps:
                 print('Reach the maximum number of training steps ！')
                 break
-            if avg_score >= -140:
+            if avg_score >= 260:
                 print('Stop Training')
                 break
 

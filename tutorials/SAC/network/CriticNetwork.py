@@ -43,7 +43,7 @@ class CriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state, action):
-        cat = T.cat((state, action), dim=-1)
+        cat = T.cat((state, action), dim=1)
         Q1 = self.critic1(cat)
         Q2 = self.critic2(cat)
         return Q1, Q2
