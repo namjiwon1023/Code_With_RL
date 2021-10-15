@@ -4,28 +4,22 @@ import time
 import ray
 import gym
 from gym.wrappers import RescaleAction
-
 from actor_learner import Actor, Learner
-
+import random
 import os
-import multiprocessing
 import copy
-from ray.util import inspect_serializability
+from torch.utils.tensorboard import SummaryWriter
 
 @ray.remote
 class ReplayBuffer:
-    def __init__(self, agent_args):
-        self.agent_args = agent_args
-
-        self.states = np.zeros([agent_args['buffer_size'], agent_args['n_states']], dtype=np.float32)
-        self.next_states = np.zeros([agent_args['buffer_size'], agent_args['n_states']], dtype=np.float32)
-
-        self.actions = np.zeros([agent_args['buffer_size'], agent_args['n_actions']], dtype=np.float32)
-
-        self.rewards = np.zeros([agent_args['buffer_size']], dtype=np.float32)
-        self.masks = np.zeros([agent_args['buffer_size']], dtype=np.float32)
-
-        self.max_size = agent_args['buffer_size']
+    def __init__(self, args):
+        self.args = args
+        self.states = np.zeros([args['buffer_size'], args['n_states']], dtype=np.float32)
+        self.next_states = np.zeros([args['buffer_size'], args['n_states']], dtype=np.float32)
+        self.actions = np.zeros([args['buffer_size'], args['n_actions']], dtype=np.float32)
+        self.rewards = np.zeros([args['buffer_size']], dtype=np.float32)
+        self.masks = np.zeros([args['buffer_size']], dtype=np.float32)
+        self.max_size = args['buffer_size']
         self.ptr, self.cur_len, = 0, 0
 
     def store(self, state, action, reward, next_state, mask):
@@ -40,9 +34,7 @@ class ReplayBuffer:
         self.cur_len = min(self.cur_len + 1, self.max_size)
 
     def sample_batch(self):
-
-        index = np.random.choice(self.cur_len, self.agent_args['batch_size'], replace = False)
-
+        index = np.random.choice(self.cur_len, self.args['batch_size'], replace = False)
         return dict(
                     state = self.states[index],
                     action = self.actions[index],
@@ -52,60 +44,75 @@ class ReplayBuffer:
                     )
 
     def __len__(self):
-
         return self.cur_len
 
     def ready(self):
-
-        if self.cur_len >= self.agent_args['batch_size']:
+        if self.cur_len >= self.args['batch_size']:
             return True
-
 
 @ray.remote
 class ParameterServer(object):
-    def __init__(self, weights, agent_args, weights_save_dir):
-        self.agent_args = agent_args
+    def __init__(self, weights, args, weights_save_dir):
+        self.args = args
         self.weights_save_dir = weights_save_dir
-        if agent_args['restore']:
+        if args['restore']:
             self.weights = T.load(self.weights_save_dir)
         else:
-            self.weights = weights.copy()
+            self.weights = copy.deepcopy(weights)
 
     def push(self, weights):
-        self.weights = weights.copy()
+        self.weights = copy.deepcopy(weights)
 
     def pull(self):
-        return self.weights
+        return copy.deepcopy(self.weights)
 
     def save_weights(self):
         T.save(self.weights, self.weights_save_dir)
 
 
 @ray.remote(num_gpus=1, max_calls=1)
-def worker_train(ps, replay_buffer, agent_args):
+def worker_train(ps, replay_buffer, args):
 
-    agent = Learner(agent_args)
+    writer = SummaryWriter('./logs/' + args['algorithm'])
+
+    T.manual_seed(args['seed'])
+    T.cuda.manual_seed(args['seed'])
+    T.cuda.manual_seed_all(args['seed'])
+    np.random.seed(args['seed'])
+    random.seed(args['seed'])
+
+    agent = Learner(args)
 
     weights = ray.get(ps.pull.remote())
     agent.set_weights(weights)
 
-    while agent.total_step <= agent_args['time_steps']:
+    cnt = 1
 
-        agent.total_step += 1
-        agent.learn(replay_buffer)
+    while True:
 
-        if agent.total_step % 300 == 0:
+        agent.learn(replay_buffer, writer)
+
+        if cnt % 300 == 0:
+            print('Weights push to PS !!!')
             weights = agent.get_weights()
             ps.push.remote(weights)
 
+        cnt += 1
 
 @ray.remote
-def worker_rollout(ps, replay_buffer, agent_args):
+def worker_rollout(ps, replay_buffer, args, worker_id):
 
-    env = gym.make(agent_args['env_name'])
+    env = gym.make(args['env_name'])
     env = RescaleAction(env, -1, 1)
 
-    agent = Actor(agent_args)
+    T.manual_seed(args['seed'] + worker_id * 1000)
+    np.random.seed(args['seed'] + worker_id * 1000)
+    random.seed(args['seed'] + worker_id * 1000)
+
+    env.seed(args['seed'] + worker_id * 1000)
+    env.action_space.np_random.seed(args['seed'] + worker_id * 1000)
+
+    agent = Actor(args)
 
     weights = ray.get(ps.pull.remote())
     agent.set_weights(weights)
@@ -116,14 +123,18 @@ def worker_rollout(ps, replay_buffer, agent_args):
     done = False
     ep_len = 0
 
-    for agent.total_step in range(1, agent_args['max_steps'] + 1):
+    while True:
+        if args['render']:
+            env.render()
+        agent.total_step += 1
+
         action = agent.select_exploration_action(state)
 
         next_state, reward, done, _ = env.step(action)
         ep_len += 1
 
         real_done = False if ep_len >= max_ep_len else done
-        mask = 0.0 if real_done else agent_args['gamma']
+        mask = 0.0 if real_done else args['gamma']
 
         replay_buffer.store.remote(state, action, reward, next_state, mask)
 
@@ -140,30 +151,39 @@ def worker_rollout(ps, replay_buffer, agent_args):
 
 
 @ray.remote
-def worker_test(ps, agent_args):
+def worker_test(ps, args):
 
-    env = gym.make(agent_args['env_name'])
+    writer = SummaryWriter('./logs/' + args['algorithm'])
+
+    env = gym.make(args['env_name'])
     env = RescaleAction(env, -1, 1)
+
+    T.manual_seed(args['seed'] * 1000 + 99999)
+    np.random.seed(args['seed'] * 1000 + 99999)
+    random.seed(args['seed'] * 1000 + 99999)
+
+    env.seed(args['seed'] * 1000 + 99999)
+    env.action_space.np_random.seed(args['seed'] * 1000 + 99999)
 
     best_score = env.reward_range[0]
 
-    agent = Actor(agent_args)
+    agent = Actor(args)
+
+    weights = ray.get(ps.pull.remote())
+    agent.set_weights(weights)
 
     scores = []
 
-    cnt = 1
-    while cnt < agent_args['time_steps']:
-
-        weights = ray.get(ps.pull.remote())
-        agent.set_weights(weights)
+    cnt = 0
+    while True:
 
         cnt += 1
 
-        ave_ret = agent._evaluate_agent(env, agent, agent_args)
+        ave_ret = agent._evaluate_agent(env, agent, args)
         scores.append(ave_ret)
+        writer.add_scalar('Reward/Test', ave_ret, cnt)
 
-        if cnt % 1000 == 0:
-            print("test_reward:", ave_ret)
+        print("test_reward:", ave_ret)
 
         if ave_ret > best_score:
             ps.save_weights.remote()
@@ -171,6 +191,10 @@ def worker_test(ps, agent_args):
             best_score = ave_ret
 
         np.savetxt("./return.txt", scores, delimiter=",")
+
+        weights = ray.get(ps.pull.remote())
+        agent.set_weights(weights)
+
         time.sleep(5)
 
 
@@ -185,52 +209,53 @@ if __name__ == '__main__':
 
     parser = ConfigParser()
     parser.read('config.ini')
-    agent_args = Dict(parser, args.algorithm)
+    args = Dict(parser, args.algorithm)
 
-    env = gym.make(agent_args['env_name'])
+    env = gym.make(args['env_name'])
     env = RescaleAction(env, -1, 1)
 
-    agent_args['n_states'] = env.observation_space.shape[0]
-    agent_args['n_actions'] = env.action_space.shape[0]
-    agent_args['max_action'] = env.action_space.high[0]
-    agent_args['low_action'] = env.action_space.low[0]
-    agent_args['max_ep_len'] = env.spec.max_episode_steps
+    args['n_states'] = env.observation_space.shape[0]
+    args['n_actions'] = env.action_space.shape[0]
+    args['max_action'] = env.action_space.high[0]
+    args['low_action'] = env.action_space.low[0]
+    args['max_ep_len'] = env.spec.max_episode_steps
 
-    weights_save_dir = os.path.join(agent_args['save_dir'] + '/' + agent_args['algorithm'] +'/' + agent_args['env_name'], 'sac_weights.pth')
+    weights_save_dir = os.path.join(args['save_dir'] + '/' + args['algorithm'] +'/' + args['env_name'], 'sac_weights.pth')
 
     # Storage location creation
-    if not os.path.exists(agent_args['save_dir']):
-        os.mkdir(agent_args['save_dir'])
+    if not os.path.exists(args['save_dir']):
+        os.mkdir(args['save_dir'])
 
-    model_path = agent_args['save_dir'] + '/' + agent_args['algorithm']
+    model_path = args['save_dir'] + '/' + args['algorithm']
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
-    model_path = model_path + '/' + agent_args['env_name']
+    model_path = model_path + '/' + args['env_name']
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
 
     ray.init()
 
-    if agent_args['restore']:
-        ps = ParameterServer.remote([], agent_args, weights_save_dir)
+    if args['restore']:
+        ps = ParameterServer.remote([], args, weights_save_dir)
     else:
-        net = Learner(agent_args)
+        net = Learner(args)
         weights = net.get_weights()
-        ps = ParameterServer.remote(weights, agent_args, weights_save_dir)
+        ps = ParameterServer.remote(weights, args, weights_save_dir)
 
-    replay_buffer = ReplayBuffer.remote(agent_args)
+    replay_buffer = ReplayBuffer.remote(args)
 
     # Start some training tasks.
-    for _ in range(agent_args['num_workers']):
-        worker_rollout.remote(ps, replay_buffer, agent_args)
-        time.sleep(0.05)
+    for i in range(args['num_workers']):
+        worker_rollout.remote(ps, replay_buffer, args, i)
 
-    for _ in range(agent_args['num_learners']):
-        worker_train.remote(ps, replay_buffer, agent_args)
+    time.sleep(20)
+
+    for _ in range(args['num_learners']):
+        worker_train.remote(ps, replay_buffer, args)
 
     time.sleep(10)
 
-    task_test = worker_test.remote(ps, agent_args)
+    task_test = worker_test.remote(ps, args)
     ray.wait([task_test,])

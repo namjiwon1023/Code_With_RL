@@ -3,19 +3,19 @@ import torch.nn as nn
 from torch.distributions import Normal
 
 class ActorSAC(nn.Module):
-    def __init__(self, agent_args):
+    def __init__(self, args):
         super(ActorSAC, self).__init__()
-        self.min_log_std = agent_args['min_log_std']
-        self.max_log_std = agent_args['max_log_std']
+        self.min_log_std = args['min_log_std']
+        self.max_log_std = args['max_log_std']
 
-        self.feature = nn.Sequential(nn.Linear(agent_args['n_states'], agent_args['hidden_units']),
+        self.feature = nn.Sequential(nn.Linear(args['n_states'], args['hidden_units']),
                                     nn.ReLU(),
-                                    nn.Linear(agent_args['hidden_units'], agent_args['hidden_units']),
+                                    nn.Linear(args['hidden_units'], args['hidden_units']),
                                     nn.ReLU(),
                                     )
 
-        self.log_std = nn.Linear(agent_args['hidden_units'], agent_args['n_actions'])
-        self.mu = nn.Linear(agent_args['hidden_units'], agent_args['n_actions'])
+        self.log_std = nn.Linear(args['hidden_units'], args['n_actions'])
+        self.mu = nn.Linear(args['hidden_units'], args['n_actions'])
 
         reset_parameters(self.log_std)
         reset_parameters(self.mu)
@@ -48,21 +48,21 @@ class ActorSAC(nn.Module):
 
 
 class CriticTwin(nn.Module):
-    def __init__(self, agent_args):
+    def __init__(self, args):
         super(CriticTwin, self).__init__()
 
-        self.value1 = nn.Sequential(nn.Linear(agent_args['n_states'] + agent_args['n_actions'], agent_args['hidden_units']),
+        self.value1 = nn.Sequential(nn.Linear(args['n_states'] + args['n_actions'], args['hidden_units']),
                                     nn.ReLU(),
-                                    nn.Linear(agent_args['hidden_units'], agent_args['hidden_units']),
+                                    nn.Linear(args['hidden_units'], args['hidden_units']),
                                     nn.ReLU(),
-                                    nn.Linear(agent_args['hidden_units'], 1)
+                                    nn.Linear(args['hidden_units'], 1)
                                     )
 
-        self.value2 = nn.Sequential(nn.Linear(agent_args['n_states'] + agent_args['n_actions'], agent_args['hidden_units']),
+        self.value2 = nn.Sequential(nn.Linear(args['n_states'] + args['n_actions'], args['hidden_units']),
                                     nn.ReLU(),
-                                    nn.Linear(agent_args['hidden_units'], agent_args['hidden_units']),
+                                    nn.Linear(args['hidden_units'], args['hidden_units']),
                                     nn.ReLU(),
-                                    nn.Linear(agent_args['hidden_units'], 1)
+                                    nn.Linear(args['hidden_units'], 1)
                                     )
 
         reset_parameters(self.value1[-1])
