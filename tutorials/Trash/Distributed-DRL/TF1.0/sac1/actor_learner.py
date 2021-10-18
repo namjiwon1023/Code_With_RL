@@ -206,7 +206,7 @@ class Actor(object):
                 o, r, d, _ = test_env.step(self.get_action(o, True))
                 ep_ret += r
                 ep_len += 1
-            rew.append(ep_ret)
+            rew.append(ep_ret)samples = ray.get(buffer.sample_batch.remote(batch_size))
 
         sample_times, _, _ = ray.get(replay_buffer.get_counts.remote())
         summary_str = self.sess.run(self.test_ops, feed_dict={
