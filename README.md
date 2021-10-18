@@ -25,14 +25,17 @@
 - [x] Soft Actor-Critic(SAC) (off-policy)
 - [x] Truncated Quantile Critics(TQC) (off-policy)
 - [ ] Distribution Correction(DisCor) based on Soft Actor-Critic(DisCor)
+- [x] Randomized Ensembled Double Q-Learning(REDQ)
 
 ### Deep reinforcement learning with a latent variable model
+
 - [x] Stochastic Latent Actor-Critic(SLAC)
 - [x] SAC with AutoEncoder(SAC_AE)
 
 ### Regularizing Deep Reinforcement Learning from Pixels
-- [ ] Data regularized Q(DrQ-v1)
-- [ ] Data regularized Q(DrQ-v2)
+
+- [x] Data regularized Q(DrQ-v1)
+- [x] Data regularized Q(DrQ-v2)
 
 ### Imitation Learning / Inverse Reinforcement Learning
 
@@ -45,11 +48,17 @@
 - [ ] Hindsight Experience Replay(HER)
 
 ### Neural network architecture designed for deep reinforcement learning
+
 - [x] Deep Dense Architectures in reinforcement learning(D2RL)
 
 ### Explore
 
 - [ ] Intrinsic Curiosity Module(ICM)
+
+### Distributed Reinforcement Learning
+
+- [x] APEX(resemblance)
+- [x] MPI
 
 
 ## Multi Agent Algorithm
@@ -176,6 +185,9 @@ Policy Based Algorithm Compare Result:
 <img src="./tutorials/assets/Result/Policy_based_avg_reward_compare.jpg"/>
 <img src="./tutorials/assets/Result/policy_step_compare.jpg"/>
 
+## Distributed Reinforcement Learning Structure
+
+![DRL Structure](./tutorials/Apex/Apex.jpg)
 
 ## Requirements
 
