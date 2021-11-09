@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.read('config.ini')
     agent_param = Dict(parser, args.algorithm)
 
-    writer = SummaryWriter('./logs/' + agent_param['algorithm'])
+    writer = SummaryWriter('./logs/' + agent_param['algorithm'] + '_' + agent_param['env_name'])
 
     env = gym.make(agent_param['env_name'])
     env = RescaleAction(env, -1, 1)
