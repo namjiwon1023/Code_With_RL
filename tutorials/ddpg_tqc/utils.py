@@ -8,6 +8,10 @@ import torch.nn as nn
 import numpy as np
 import random
 
+from torch import distributions as pyd
+from torch.distributions.utils import _standard_normal
+import re
+
 def _random_seed(env, test_env, seed):
     if T.backends.cudnn.enabled:
         T.backends.cudnn.benchmark = False
@@ -96,3 +100,53 @@ def quantile_huber_loss_f(quantiles, samples, device):
     tau = T.arange(n_quantiles, device=device).float() / n_quantiles + 1 / 2 / n_quantiles
     loss = (T.abs(tau[None, None, :, None] - (pairwise_delta < 0).float()) * huber_loss).mean()
     return loss
+
+
+
+# code from https://github.com/facebookresearch/drqv2/blob/main/utils.py
+
+class TruncatedNormal(pyd.Normal):
+    def __init__(self, loc, scale, low=-1.0, high=1.0, eps=1e-6):
+        super().__init__(loc, scale, validate_args=False)
+        self.low = low
+        self.high = high
+        self.eps = eps
+
+    def _clamp(self, x):
+        clamped_x = torch.clamp(x, self.low + self.eps, self.high - self.eps)
+        x = x - x.detach() + clamped_x.detach()
+        return x
+
+    def sample(self, clip=None, sample_shape=torch.Size()):
+        shape = self._extended_shape(sample_shape)
+        eps = _standard_normal(shape,
+                               dtype=self.loc.dtype,
+                               device=self.loc.device)
+        eps *= self.scale
+        if clip is not None:
+            eps = torch.clamp(eps, -clip, clip)
+        x = self.loc + eps
+        return self._clamp(x)
+
+
+def schedule(schdl, step):
+    try:
+        return float(schdl)
+    except ValueError:
+        match = re.match(r'linear\((.+),(.+),(.+)\)', schdl)
+        if match:
+            init, final, duration = [float(g) for g in match.groups()]
+            mix = np.clip(step / duration, 0.0, 1.0)
+            return (1.0 - mix) * init + mix * final
+        match = re.match(r'step_linear\((.+),(.+),(.+),(.+),(.+)\)', schdl)
+        if match:
+            init, final1, duration1, final2, duration2 = [
+                float(g) for g in match.groups()
+            ]
+            if step <= duration1:
+                mix = np.clip(step / duration1, 0.0, 1.0)
+                return (1.0 - mix) * init + mix * final1
+            else:
+                mix = np.clip((step - duration1) / duration2, 0.0, 1.0)
+                return (1.0 - mix) * final1 + mix * final2
+    raise NotImplementedError(schdl)
