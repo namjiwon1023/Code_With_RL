@@ -71,7 +71,7 @@ class latentREDQAlgorithm:
 
         self.names = locals()
         for i in range(self.args.num_Q):
-            self.names[f'q_net_{i}_path'] = os.path.join(args.save_dir + '/' + args.algorithm +'/' + args.env_name, args.file_critic + '_%d' % i)
+            self.names[f'q_net_{i}_path'] = os.path.join(args.save_dir +'/' + args.env_name, args.file_critic + '_%d' % i)
 
         # Collection of Q Network
         self.q_net_list, self.q_target_net_list = [], []
@@ -344,7 +344,7 @@ class latentREDQAlgorithm:
         T.save(self.actor.state_dict(), self.actor_path)
         for i in range(self.args.num_Q):
             self._save_model(self.q_net_list[i], self.names[f'q_net_{i}_path'])
-        checkpoint = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'log_alpha.pth')
+        checkpoint = os.path.join(self.args.save_dir +'/' + self.args.env_name, 'log_alpha.pth')
         T.save(self.log_alpha, checkpoint)
 
     def load_models(self):
@@ -354,7 +354,7 @@ class latentREDQAlgorithm:
         self.latent.encoder.load_state_dict(T.load(self.encoder_path))
         for i in range(self.args.num_Q):
             self._load_model(self.q_net_list[i], self.names[f'q_net_{i}_path'])
-        checkpoint = os.path.join(self.args.save_dir + '/' + self.args.algorithm +'/' + self.args.env_name, 'log_alpha.pth')
+        checkpoint = os.path.join(self.args.save_dir +'/' + self.args.env_name, 'log_alpha.pth')
         self.log_alpha = T.load(checkpoint)
 
     def _save_model(self, net, dirpath):
